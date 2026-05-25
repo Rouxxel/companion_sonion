@@ -36,5 +36,23 @@
     "typescript": "^5.9.3",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2"
+  },
+  "viewsContainers": {
+    "activitybar": [
+      {
+        "id": "codingCompanion",
+        "title": "Companion",
+        "icon": "media/icon.png"
+      }
+    ]
+  },
+  "views": {
+    "codingCompanion": [
+      {
+        "type": "webview",
+        "id": "companionSidebar",
+        "name": "Companion Settings"
+      }
+    ]
   }
 }
