@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { CompanionPanel } from '../companion/CompanionPanel';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
 
@@ -16,6 +17,12 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             enableScripts: true
         };
 
+        webviewView.webview.onDidReceiveMessage(message => {
+            if (message.command === 'spawn') {
+                vscode.commands.executeCommand('companion.spawn');
+            }
+        });
+
         webviewView.webview.html = this.getHtml();
     }
 
@@ -25,9 +32,17 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         <body>
             <h2>Coding Companion</h2>
 
-            <button id="spawn">
-                Spawn Companion
-            </button>
+            <button onclick="spawn()">Spawn Companion</button>
+
+            <script>
+                const vscode = acquireVsCodeApi();
+
+                function spawn() {
+                    vscode.postMessage({
+                        command: 'spawn'
+                    });
+                }
+            </script>
         </body>
         </html>
         `;

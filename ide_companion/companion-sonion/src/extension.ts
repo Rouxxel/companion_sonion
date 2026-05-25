@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { SidebarProvider } from './sidebar/SidebarProvider';
+import { CompanionPanel } from './companion/CompanionPanel';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -12,6 +13,18 @@ export function activate(context: vscode.ExtensionContext) {
             'companionSidebar',
             sidebarProvider
         )
+    );
+
+    let panel: CompanionPanel | undefined;
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('companion.spawn', () => {
+            if (!panel) {
+                panel = new CompanionPanel(context.extensionUri);
+            } else {
+                panel.show();
+            }
+        })
     );
 }
 
