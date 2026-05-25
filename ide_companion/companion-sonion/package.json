@@ -9,16 +9,10 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "*"
+  ],
   "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "companion-sonion.helloWorld",
-        "title": "Hello World"
-      }
-    ]
-  },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
@@ -37,22 +31,32 @@
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2"
   },
-  "viewsContainers": {
-    "activitybar": [
+  "contributes": {
+    "commands": [
       {
-        "id": "codingCompanion",
-        "title": "Companion",
-        "icon": "media/icon.png"
+        "command": "companion-sonion.helloWorld",
+        "title": "Hello World"
       }
-    ]
-  },
-  "views": {
-    "codingCompanion": [
-      {
-        "type": "webview",
-        "id": "companionSidebar",
-        "name": "Companion Settings"
-      }
-    ]
+    ],
+
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codingCompanion",
+          "title": "Companion",
+          "icon": "media/icon.png"
+        }
+      ]
+    },
+
+    "views": {
+      "codingCompanion": [
+        {
+          "type": "webview",
+          "id": "companionSidebar",
+          "name": "Companion Settings"
+        }
+      ]
+    }
   }
 }
