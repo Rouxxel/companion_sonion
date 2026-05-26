@@ -15,6 +15,7 @@ export class CompanionPanel {
 
         // initial render
         this.postRender();
+        console.log("Started render loop");
     }
 
     constructor(
@@ -135,7 +136,7 @@ export class CompanionPanel {
                         } catch (statError) {
                             console.error(`Local asset not found: ${fsUri.toString()}`, statError);
                             // Fallback to default asset if local file doesn't exist
-                            c.assetPath = 'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif';
+                            c.assetPath = 'https://media1.tenor.com/m/Wqi3Xrnz2wwAAAAd/mambo-umamusume.gif';
                         }
                     } catch (e) {
                         console.error('Failed to convert local asset to webview URI:', e);
@@ -144,7 +145,7 @@ export class CompanionPanel {
                 } else {
                     console.error(`Could not resolve local asset path for: ${c.assetPath}`);
                     // Fallback to default asset
-                    c.assetPath = 'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif';
+                    c.assetPath = 'https://media1.tenor.com/m/Wqi3Xrnz2wwAAAAd/mambo-umamusume.gif';
                 }
             }
         }
@@ -299,10 +300,12 @@ export class CompanionPanel {
     }
 
     public show() {
+        console.log("Showing companion panel");
         this.panel.reveal();
     }
 
     public dispose() {
+        console.log("Disposing companion panel");
         this.panel.dispose();
     }
 }

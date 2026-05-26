@@ -24,11 +24,13 @@ export class CompanionManager {
         if (!this.storage) return;
         await this.storage.update(STORAGE_KEY, Array.from(this.companions.values()));
         this._onDidChange.fire();
+        console.log("Saved companion");
     }
 
     create(companion: Companion) {
         this.companions.set(companion.id, companion);
         this.save();
+        console.log("Created and saved companion");
     }
 
     update(id: string, data: Partial<Companion>) {
@@ -37,11 +39,13 @@ export class CompanionManager {
 
         this.companions.set(id, { ...c, ...data });
         this.save();
+        console.log("Updated and saved companion");
     }
 
     delete(id: string) {
         this.companions.delete(id);
         this.save();
+        console.log("Deleted companion");
     }
 
     get(id: string) {
@@ -74,6 +78,7 @@ export class CompanionManager {
         this.companions.clear();
         arr.forEach(c => this.companions.set(c.id, c));
         await this.save();
+        console.log("Loaded profile");
     }
 
     async deleteProfile(name: string) {
@@ -81,6 +86,7 @@ export class CompanionManager {
         const profiles = this.storage.get<Record<string, Companion[]>>(PROFILES_KEY, {});
         delete profiles[name];
         await this.storage.update(PROFILES_KEY, profiles);
+        console.log("Deleted profile");
     }
 
     // Import/export world state
@@ -99,6 +105,7 @@ export class CompanionManager {
         this.companions.clear();
         arr.forEach(c => this.companions.set(c.id, c));
         await this.save();
+        console.log("Imported world");
     }
 
     // Local asset import (copy into extension storage)
@@ -113,12 +120,14 @@ export class CompanionManager {
         await vscode.workspace.fs.copy(source, targetUri, { overwrite: true });
 
         // return marker that indicates local asset stored in global storage
+        console.log("Imported local asset");
         return `local:${filename}`;
     }
 
     getLocalAssetFsPath(marker: string): vscode.Uri | undefined {
         if (!marker || !marker.startsWith('local:') || !this.storageUri) return undefined;
         const filename = marker.substring('local:'.length);
+        console.log("Getting local asset fs path");
         return vscode.Uri.joinPath(this.storageUri, filename);
     }
 }

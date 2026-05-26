@@ -24,7 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('companion.spawn', async (options?: { assetPath?: string; localAssetUri?: string; size?: number; x?: number; y?: number }) => {
 
-            const defaultAssetPath = "https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif";
+            const defaultAssetPath = "https://media1.tenor.com/m/Wqi3Xrnz2wwAAAAd/mambo-umamusume.gif";
             const defaultSize = 180;
             const defaultX = 100;
             const defaultY = 100;

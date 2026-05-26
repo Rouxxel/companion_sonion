@@ -99,7 +99,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
             <div class="form-group" id="urlGroup">
                 <label for="assetUrl">Asset URL (or leave blank for default):</label>
-                <input type="text" id="assetUrl" placeholder="https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif">
+                <input type="text" id="assetUrl" placeholder="https://url.to.gif.com/actual_gif.gif">
                 <div class="info-text">- Enter a URL to an image (GIF, PNG, WebM, etc.)</div>
                 <div class="info-text">- While hovering an image: right click -> open image in new tab -> copy the URL</div>
             </div>
