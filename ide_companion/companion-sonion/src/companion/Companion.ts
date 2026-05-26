@@ -1,7 +1,7 @@
 export interface Companion {
     id: string;
-    x: number;
-    y: number;
+    x: number; // percentage (0-1) of window width
+    y: number; // percentage (0-1) of window height
     size: number;
     assetPath: string;
     locked: boolean;

@@ -48,8 +48,8 @@ export class CompanionPanel {
         this.panel.webview.onDidReceiveMessage(async (msg) => {
             if (msg.command === 'savePosition') {
                 this.manager.update(msg.id, {
-                    x: parseInt(msg.x),
-                    y: parseInt(msg.y)
+                    x: msg.x,
+                    y: msg.y
                 });
             }
 
@@ -211,11 +211,19 @@ export class CompanionPanel {
 
                     dragState.item.style.cursor = 'grab';
 
+                    // Convert pixel position back to percentage
+                    const windowWidth = window.innerWidth;
+                    const windowHeight = window.innerHeight;
+                    const pixelX = parseFloat(dragState.item.style.left);
+                    const pixelY = parseFloat(dragState.item.style.top);
+                    const percentX = pixelX / windowWidth;
+                    const percentY = pixelY / windowHeight;
+
                     vscode.postMessage({
                         command: 'savePosition',
                         id: dragState.id,
-                        x: dragState.item.style.left,
-                        y: dragState.item.style.top
+                        x: percentX,
+                        y: percentY
                     });
 
                     dragState.item = null;
@@ -229,14 +237,18 @@ export class CompanionPanel {
 
                     world.innerHTML = '';
 
+                    const windowWidth = window.innerWidth;
+                    const windowHeight = window.innerHeight;
+
                     companions.forEach(c => {
                         const img = document.createElement('img');
 
                         img.className = 'companion';
                         img.src = c.assetPath;
                         img.draggable = false;
-                        img.style.left = c.x + 'px';
-                        img.style.top = c.y + 'px';
+                        // Convert percentage to pixels
+                        img.style.left = (c.x * windowWidth) + 'px';
+                        img.style.top = (c.y * windowHeight) + 'px';
                         img.style.width = c.size + 'px';
                         img.style.opacity = 1;
                         img.style.cursor = c.locked ? 'not-allowed' : 'grab';

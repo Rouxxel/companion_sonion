@@ -23,8 +23,8 @@ export function activate(context: vscode.ExtensionContext) {
 
             const defaultAssetPath = "https://media1.tenor.com/m/Wqi3Xrnz2wwAAAAd/mambo-umamusume.gif";
             const defaultSize = 180;
-            const defaultX = 100;
-            const defaultY = 100;
+            const defaultX = 0.5; // center (50%)
+            const defaultY = 0.5; // center (50%)
 
             let assetPath = options?.assetPath || defaultAssetPath;
 
