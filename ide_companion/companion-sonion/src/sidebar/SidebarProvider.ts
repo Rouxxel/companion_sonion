@@ -79,24 +79,35 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 label { display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px; }
                 input, select { width: 100%; box-sizing: border-box; padding: 6px; border: 1px solid var(--vscode-input-border); background: var(--vscode-input-background); color: var(--vscode-input-foreground); }
                 input:focus, select:focus { outline: none; border-color: var(--vscode-focusBorder); }
+                input:disabled, button:disabled { opacity: 0.5; cursor: not-allowed; }
                 button { width: 100%; padding: 8px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; cursor: pointer; font-size: 13px; margin-top: 8px; }
-                button:hover { background: var(--vscode-button-hoverBackground); }
+                button:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
                 .info-text { font-size: 11px; color: var(--vscode-descriptionForeground); margin-top: 2px; }
+                .mode-switch { display: flex; gap: 8px; margin-bottom: 12px; }
+                .mode-switch button { flex: 1; margin-top: 0; }
+                .mode-switch button.active { background: var(--vscode-button-secondaryHoverBackground); }
+                .clear-btn { width: auto; padding: 4px 8px; font-size: 11px; margin-top: 4px; background: var(--vscode-errorForeground); }
             </style>
         </head>
         <body>
             <h2>Companion Spawner</h2>
 
-            <div class="form-group">
+            <div class="mode-switch">
+                <button type="button" id="urlModeBtn" onclick="setMode('url')" class="active">URL Mode</button>
+                <button type="button" id="localModeBtn" onclick="setMode('local')">Local File Mode</button>
+            </div>
+
+            <div class="form-group" id="urlGroup">
                 <label for="assetUrl">Asset URL (or leave blank for default):</label>
                 <input type="text" id="assetUrl" placeholder="https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif">
                 <div class="info-text">Enter a URL to an image (GIF, PNG, WebM, etc.)</div>
             </div>
 
-            <div class="form-group">
-                <label>Local file (optional, overrides URL if selected):</label>
-                <button type="button" onclick="pickLocalAsset()">Pick Local File</button>
+            <div class="form-group" id="localGroup" style="display: none;">
+                <label>Local file:</label>
+                <button type="button" id="pickLocalBtn" onclick="pickLocalAsset()">Pick Local File</button>
                 <div id="localFileName" class="info-text">No local file selected</div>
+                <button type="button" id="clearLocalBtn" onclick="clearLocalAsset()" class="clear-btn" style="display: none;">Clear Selection</button>
             </div>
 
             <div class="form-group">
@@ -121,6 +132,33 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             <script>
                 const vscode = acquireVsCodeApi();
                 let localAssetPath = '';
+                let currentMode = 'url';
+
+                function setMode(mode) {
+                    currentMode = mode;
+                    const urlGroup = document.getElementById('urlGroup');
+                    const localGroup = document.getElementById('localGroup');
+                    const urlModeBtn = document.getElementById('urlModeBtn');
+                    const localModeBtn = document.getElementById('localModeBtn');
+                    const assetUrl = document.getElementById('assetUrl');
+                    const pickLocalBtn = document.getElementById('pickLocalBtn');
+
+                    if (mode === 'url') {
+                        urlGroup.style.display = 'block';
+                        localGroup.style.display = 'none';
+                        urlModeBtn.classList.add('active');
+                        localModeBtn.classList.remove('active');
+                        assetUrl.disabled = false;
+                        pickLocalBtn.disabled = true;
+                    } else {
+                        urlGroup.style.display = 'none';
+                        localGroup.style.display = 'block';
+                        urlModeBtn.classList.remove('active');
+                        localModeBtn.classList.add('active');
+                        assetUrl.disabled = true;
+                        pickLocalBtn.disabled = false;
+                    }
+                }
 
                 function spawn() {
                     const assetUrl = document.getElementById('assetUrl').value || '';
@@ -129,8 +167,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
                     vscode.postMessage({
                         command: 'spawn',
-                        assetPath: assetUrl,
-                        localAssetUri: localAssetPath || undefined,
+                        assetPath: currentMode === 'url' ? assetUrl : undefined,
+                        localAssetUri: currentMode === 'local' ? localAssetPath : undefined,
                         size: sizeStr ? parseInt(sizeStr) : undefined,
                         position: position
                     });
@@ -140,16 +178,35 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     vscode.postMessage({ command: 'pickLocalAsset' });
                 }
 
+                function clearLocalAsset() {
+                    localAssetPath = '';
+                    const fileDisplay = document.getElementById('localFileName');
+                    const clearBtn = document.getElementById('clearLocalBtn');
+                    if (fileDisplay) {
+                        fileDisplay.textContent = 'No local file selected';
+                    }
+                    if (clearBtn) {
+                        clearBtn.style.display = 'none';
+                    }
+                }
+
                 window.addEventListener('message', event => {
                     const message = event.data;
                     if (message.command === 'localAssetSelected') {
                         localAssetPath = message.path || '';
                         const fileDisplay = document.getElementById('localFileName');
+                        const clearBtn = document.getElementById('clearLocalBtn');
                         if (fileDisplay) {
                             fileDisplay.textContent = localAssetPath ? 'Selected: ' + message.name : 'No local file selected';
                         }
+                        if (clearBtn) {
+                            clearBtn.style.display = localAssetPath ? 'inline-block' : 'none';
+                        }
                     }
                 });
+
+                // Initialize with URL mode
+                setMode('url');
             </script>
         </body>
         </html>
