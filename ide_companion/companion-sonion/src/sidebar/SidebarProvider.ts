@@ -90,7 +90,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             </style>
         </head>
         <body>
-            <h2>Companion Spawner</h2>
+            <h2>Companion Sonion</h2>
 
             <div class="mode-switch">
                 <button type="button" id="urlModeBtn" onclick="setMode('url')" class="active">URL Mode</button>

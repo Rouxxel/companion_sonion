@@ -1,16 +1,21 @@
 {
   "name": "companion-sonion",
   "displayName": "Companion Sonion",
-  "description": "A companion for coding, simple",
-  "version": "0.0.1",
+  "description": "A VS Code extension that brings animated companions into your editor. Spawn, customize, and manage multiple GIF/PNG/WebM companions that persist across sessions.",
+  "version": "0.1.0",
+  "publisher": "Rouxxel",
   "engines": {
     "vscode": "^1.120.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Rouxxel/companion_sonion.git"
   },
   "categories": [
     "Other"
   ],
   "activationEvents": [
-    "*"
+    "onView:companionSidebar.view"
   ],
   "main": "./out/extension.js",
   "scripts": {
@@ -34,7 +39,7 @@
   "contributes": {
     "commands": [
       {
-        "command": "companion-sonion.helloWorld",
+        "command": "companion.helloWorld",
         "title": "Your companion is here!"
       },
       {
@@ -74,7 +79,8 @@
         {
           "type": "webview",
           "id": "companionSidebar",
-          "name": "Companion Settings"
+          "name": "Companion Settings",
+          "icon": "media/icon.png"
         }
       ]
     }
