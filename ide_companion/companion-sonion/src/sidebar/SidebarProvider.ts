@@ -23,11 +23,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
                 // Calculate coordinates based on position
                 const positions: Record<string, { x: number; y: number }> = {
-                    center: { x: 100, y: 100 },
-                    topLeft: { x: 50, y: 50 },
-                    topRight: { x: 800, y: 50 },
-                    bottomLeft: { x: 50, y: 550 },
-                    bottomRight: { x: 800, y: 550 }
+                    center: { x: 150, y: 150 },
                 };
 
                 const coords = positions[position] || positions.center;
@@ -103,17 +99,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 <label for="assetSize">Size (pixels, or leave blank for 180):</label>
                 <input type="number" id="assetSize" placeholder="180" min="40" max="500">
                 <div class="info-text">Companion width in pixels (min: 40)</div>
-            </div>
-
-            <div class="form-group">
-                <label for="startPosition">Starting Position (or leave blank for center):</label>
-                <select id="startPosition">
-                    <option value="center">Center</option>
-                    <option value="topLeft">Top Left</option>
-                    <option value="topRight">Top Right</option>
-                    <option value="bottomLeft">Bottom Left</option>
-                    <option value="bottomRight">Bottom Right</option>
-                </select>
             </div>
 
             <button onclick="spawn()">Spawn Companion</button>
