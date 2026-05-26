@@ -148,6 +148,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         localModeBtn.classList.remove('active');
                         assetUrl.disabled = false;
                         pickLocalBtn.disabled = true;
+                        console.log('[setMode] switching mode:', mode);
                     } else {
                         urlGroup.style.display = 'none';
                         localGroup.style.display = 'block';
@@ -155,7 +156,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         localModeBtn.classList.add('active');
                         assetUrl.disabled = true;
                         pickLocalBtn.disabled = false;
+                        console.log('[setMode] switching mode:', mode);
                     }
+
+                    console.log('[setMode] currentMode is now:', currentMode);
                 }
 
                 function spawn() {
@@ -163,20 +167,25 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     const sizeStr = document.getElementById('assetSize').value || '';
                     const position = document.getElementById('startPosition').value || 'center';
 
-                    vscode.postMessage({
+                    const payload = {
                         command: 'spawn',
                         assetPath: currentMode === 'url' ? assetUrl : undefined,
                         localAssetUri: currentMode === 'local' ? localAssetPath : undefined,
                         size: sizeStr ? parseInt(sizeStr) : undefined,
                         position: position
-                    });
+                    };
+
+                    console.log('[spawn] sending payload:', payload);
+                    vscode.postMessage(payload);
                 }
 
                 function pickLocalAsset() {
+                    console.log('[pickLocalAsset] requesting file picker');
                     vscode.postMessage({ command: 'pickLocalAsset' });
                 }
 
                 function clearLocalAsset() {
+                    console.log('[clearLocalAsset] clearing selected file');
                     localAssetPath = '';
                     const fileDisplay = document.getElementById('localFileName');
                     const clearBtn = document.getElementById('clearLocalBtn');
@@ -186,24 +195,36 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     if (clearBtn) {
                         clearBtn.style.display = 'none';
                     }
+                    
+                    console.log('[clearLocalAsset] localAssetPath reset to empty');
                 }
 
                 window.addEventListener('message', event => {
                     const message = event.data;
+                    console.log('[message received from extension]', message);
+
                     if (message.command === 'localAssetSelected') {
                         localAssetPath = message.path || '';
                         const fileDisplay = document.getElementById('localFileName');
                         const clearBtn = document.getElementById('clearLocalBtn');
+                        console.log('[localAssetSelected] received:', {
+                            path: message.path,
+                            name: message.name
+                        });
+
                         if (fileDisplay) {
                             fileDisplay.textContent = localAssetPath ? '- Selected: ' + message.name : 'No local file selected';
                         }
                         if (clearBtn) {
                             clearBtn.style.display = localAssetPath ? 'inline-block' : 'none';
                         }
+
+                        console.log('[localAssetSelected] updated localAssetPath:', localAssetPath);
                     }
                 });
 
                 // Initialize with URL mode
+                console.log('[init] setting default mode: url');
                 setMode('url');
             </script>
         </body>

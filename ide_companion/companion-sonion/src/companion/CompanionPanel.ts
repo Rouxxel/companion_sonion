@@ -15,7 +15,7 @@ export class CompanionPanel {
 
         // initial render
         this.postRender();
-        console.log("Started render loop");
+        console.log("[startRenderLoop] Started render loop");
     }
 
     constructor(
@@ -300,12 +300,12 @@ export class CompanionPanel {
     }
 
     public show() {
-        console.log("Showing companion panel");
+        console.log("[show] Showing companion panel");
         this.panel.reveal();
     }
 
     public dispose() {
-        console.log("Disposing companion panel");
+        console.log("[dispose] Disposing companion panel");
         this.panel.dispose();
     }
 }
