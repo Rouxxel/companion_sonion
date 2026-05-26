@@ -22,14 +22,28 @@ export function activate(context: vscode.ExtensionContext) {
 
     // spawn command = just "add companion"
     context.subscriptions.push(
-        vscode.commands.registerCommand('companion.spawn', () => {
+        vscode.commands.registerCommand('companion.spawn', async (options?: { assetPath?: string; localAssetUri?: string; size?: number; x?: number; y?: number }) => {
+
+            const defaultAssetPath = "https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif";
+            const defaultSize = 180;
+            const defaultX = 100;
+            const defaultY = 100;
+
+            let assetPath = options?.assetPath || defaultAssetPath;
+
+            if (options?.localAssetUri) {
+                const marker = await manager.importLocalAsset(vscode.Uri.file(options.localAssetUri));
+                if (marker) {
+                    assetPath = marker;
+                }
+            }
 
             manager.create({
                 id: Date.now().toString(),
-                x: 100,
-                y: 100,
-                size: 180,
-                assetPath: "https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif",
+                x: options?.x ?? defaultX,
+                y: options?.y ?? defaultY,
+                size: options?.size ?? defaultSize,
+                assetPath: assetPath,
                 locked: false
             });
 
