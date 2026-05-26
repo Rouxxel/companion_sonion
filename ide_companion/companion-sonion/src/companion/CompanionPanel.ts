@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { CompanionManager } from './CompanionManager';
+import { Companion } from './Companion';
 
 export class CompanionPanel {
     public static currentPanel: CompanionPanel | undefined;
@@ -7,12 +8,13 @@ export class CompanionPanel {
     private panel: vscode.WebviewPanel;
 
     private startRenderLoop() {
-        setInterval(() => {
-            this.panel.webview.postMessage({
-                command: 'render',
-                companions: this.manager.getAll()
-            });
-        }, 100);
+        // subscribe to manager changes and push updated companion list
+        this.manager.onDidChange(() => {
+            this.postRender();
+        });
+
+        // initial render
+        this.postRender();
     }
 
     constructor(
@@ -59,15 +61,16 @@ export class CompanionPanel {
             if (msg.command === 'contextMenu') {
                 const id = msg.id;
                 const companion = this.manager.get(id);
-                if (!companion) return;
+                if (!companion) { return; }
 
                 const choice = await vscode.window.showQuickPick([
                     'Toggle Lock',
                     'Delete',
-                    'Change Asset URL'
+                    'Change Asset URL',
+                    'Import Local Asset'
                 ], { placeHolder: 'Companion actions' });
 
-                if (!choice) return;
+                if (!choice) { return; }
 
                 if (choice === 'Toggle Lock') {
                     this.manager.update(id, { locked: !companion.locked });
@@ -83,11 +86,39 @@ export class CompanionPanel {
                         this.manager.update(id, { assetPath: url });
                     }
                 }
+                if (choice === 'Import Local Asset') {
+                    const uris = await vscode.window.showOpenDialog({ canSelectMany: false, filters: { Images: ['png','jpg','jpeg','gif','webm'] } });
+                    if (!uris || uris.length === 0) { return; }
+                    const marker = await this.manager.importLocalAsset(uris[0]);
+                    if (marker) {
+                        this.manager.update(id, { assetPath: marker });
+                    }
+                }
             }
         });
 
         this.startRenderLoop();
         this.panel.webview.html = this.getHtml();
+    }
+
+    private postRender() {
+        const comps: Companion[] = this.manager.getAll().map((c: Companion) => ({ ...c }));
+
+        // resolve local assets to webview URIs
+        comps.forEach((c: Companion) => {
+            if (typeof c.assetPath === 'string' && c.assetPath.startsWith('local:')) {
+                const fsUri = this.manager.getLocalAssetFsPath(c.assetPath);
+                if (fsUri) {
+                    try {
+                        c.assetPath = this.panel.webview.asWebviewUri(fsUri).toString();
+                    } catch (e) {
+                        // fallback leave assetPath as is
+                    }
+                }
+            }
+        });
+
+        this.panel.webview.postMessage({ command: 'render', companions: comps });
     }
 
     private getHtml() {

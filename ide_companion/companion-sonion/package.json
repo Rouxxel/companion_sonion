@@ -40,6 +40,22 @@
       {
         "command": "companion.spawn",
         "title": "Spawn Companion"
+      },
+      {
+        "command": "companion.saveProfile",
+        "title": "Save Companion Profile"
+      },
+      {
+        "command": "companion.loadProfile",
+        "title": "Load Companion Profile"
+      },
+      {
+        "command": "companion.exportWorld",
+        "title": "Export Companion World"
+      },
+      {
+        "command": "companion.importWorld",
+        "title": "Import Companion World"
       }
     ],
 
