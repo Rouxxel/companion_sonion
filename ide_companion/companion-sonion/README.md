@@ -2,7 +2,7 @@
 
 A VS Code extension that brings animated companions into your editor. Spawn, customize, and manage multiple GIF/PNG/WebM companions that persist across sessions.
 
-![Sonion](../../sonion.jpeg)
+![Sonion](media/sonion.jpeg)
 
 ## Features
 
