@@ -100,20 +100,21 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             <div class="form-group" id="urlGroup">
                 <label for="assetUrl">Asset URL (or leave blank for default):</label>
                 <input type="text" id="assetUrl" placeholder="https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif">
-                <div class="info-text">Enter a URL to an image (GIF, PNG, WebM, etc.)</div>
+                <div class="info-text">- Enter a URL to an image (GIF, PNG, WebM, etc.)</div>
+                <div class="info-text">- While hovering an image right click -> open image in new tab -> copy the URL</div>
             </div>
 
             <div class="form-group" id="localGroup" style="display: none;">
                 <label>Local file:</label>
                 <button type="button" id="pickLocalBtn" onclick="pickLocalAsset()">Pick Local File</button>
-                <div id="localFileName" class="info-text">No local file selected</div>
+                <div id="localFileName" class="info-text">- No local file selected</div>
                 <button type="button" id="clearLocalBtn" onclick="clearLocalAsset()" class="clear-btn" style="display: none;">Clear Selection</button>
             </div>
 
             <div class="form-group">
                 <label for="assetSize">Size (pixels, or leave blank for 180):</label>
                 <input type="number" id="assetSize" placeholder="180" min="40" max="500">
-                <div class="info-text">Companion width in pixels (min: 40)</div>
+                <div class="info-text">- Companion width in pixels (min: 40, max: 500)</div>
             </div>
 
             <div class="form-group">
@@ -197,7 +198,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         const fileDisplay = document.getElementById('localFileName');
                         const clearBtn = document.getElementById('clearLocalBtn');
                         if (fileDisplay) {
-                            fileDisplay.textContent = localAssetPath ? 'Selected: ' + message.name : 'No local file selected';
+                            fileDisplay.textContent = localAssetPath ? '- Selected: ' + message.name : 'No local file selected';
                         }
                         if (clearBtn) {
                             clearBtn.style.display = localAssetPath ? 'inline-block' : 'none';
