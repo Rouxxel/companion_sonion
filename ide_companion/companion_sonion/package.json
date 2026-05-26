@@ -69,7 +69,7 @@
         {
           "id": "codingCompanion",
           "title": "Companion",
-          "icon": "media/icon.png"
+          "icon": "https://github.com/Rouxxel/companion_sonion/blob/main/ide_companion/companion_sonion/media/icon.png?raw=true"
         }
       ]
     },
@@ -80,7 +80,7 @@
           "type": "webview",
           "id": "companionSidebar",
           "name": "Companion Settings",
-          "icon": "media/icon.png"
+          "icon": "https://github.com/Rouxxel/companion_sonion/blob/main/ide_companion/companion_sonion/media/icon.png?raw=true"
         }
       ]
     }
