@@ -33,15 +33,24 @@ export class CompanionPanel {
         <html>
         <body style="margin:0; overflow:hidden;">
 
+            <style>
+                img#companion {
+                    position: absolute;
+                    width: 180px;
+                    left: 100px;
+                    top: 100px;
+                    -webkit-user-drag: none;
+                }
+
+                img#companion:hover {
+                    opacity: 0.3;
+                    cursor: grab;
+                }
+            </style>
+
             <img id="companion"
                 src="https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif"
-                style="
-                    position:absolute;
-                    width:180px;
-                    left:100px;
-                    top:100px;
-                    cursor:grab;
-                "
+                draggable="false"
             />
 
             <script>
@@ -51,6 +60,9 @@ export class CompanionPanel {
                 let isDragging = false;
                 let offsetX = 0;
                 let offsetY = 0;
+
+                // prevent native image drag
+                img.ondragstart = () => false;
 
                 img.addEventListener('mousedown', (e) => {
                     isDragging = true;
@@ -68,8 +80,9 @@ export class CompanionPanel {
                 });
 
                 document.addEventListener('mouseup', () => {
+                    if (!isDragging) return;
                     isDragging = false;
-                    img.style.cursor = 'grab';
+                    img.style.cursor = '';
 
                     vscode.postMessage({
                         command: 'savePosition',
