@@ -11,6 +11,10 @@ A VS Code extension that brings animated companions into your editor. Spawn, cus
 - **Lock/Unlock**: Prevent accidental movement by locking a companion (right-click context menu)
 - **Delete**: Double-click any companion to instantly remove it
 - **Custom Assets**: Change companion images via URL or import local image files (PNG, JPG, GIF, WebM)
+- **URL/Local Mode Toggle**: Switch between URL and local file modes in the sidebar with automatic disable logic
+- **Clear Local Asset**: Option to clear local file selection and switch back to URL mode
+- **Relative Positioning**: Companions use percentage-based positioning (0-1) relative to window size for consistent placement across different screen sizes
+- **Split Panel View**: Companion panel opens in split right view for better workspace integration
 - **Profiles**: Save and load entire companion layouts as named profiles
 - **Import/Export**: Export your world state to JSON and import it later to restore your companions
 - **Persistence**: All companion positions, sizes, and settings are automatically saved and restored on startup
@@ -38,6 +42,7 @@ A VS Code extension that brings animated companions into your editor. Spawn, cus
      - **Delete**: Remove the companion
      - **Change Asset URL**: Update the image URL
      - **Import Local Asset**: Select a local image file to use
+     - **Clear Local Asset (Switch to URL)**: Clear local file selection and switch to URL mode (only shown when local asset is active)
 
 ### Profiles
 
@@ -84,6 +89,12 @@ This extension contributes the following commands:
 - Import/export world state
 - Local asset import
 - Persistent storage via VS Code globalState
+- URL/Local file mode toggle in sidebar
+- Clear local asset selection option
+- Relative percentage-based positioning for consistent placement
+- Split panel view integration
+- Improved error handling for local assets
+- Webview disposal handling
 
 ---
 
