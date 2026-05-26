@@ -73,7 +73,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         <html>
         <head>
             <style>
-                body { font-family: var(--vscode-font-family); padding: 0.75rem; }
+                body { font-family: "Bahnschrift"; padding: 0.75rem; }
                 h2 { margin-top: 0; }
                 .form-group { margin-bottom: 0.75rem; }
                 label { display: block; font-weight: 500; margin-bottom: 0.25rem; font-size: 0.75rem; }
@@ -101,7 +101,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 <label for="assetUrl">Asset URL (or leave blank for default):</label>
                 <input type="text" id="assetUrl" placeholder="https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif">
                 <div class="info-text">- Enter a URL to an image (GIF, PNG, WebM, etc.)</div>
-                <div class="info-text">- While hovering an image right click -> open image in new tab -> copy the URL</div>
+                <div class="info-text">- While hovering an image: right click -> open image in new tab -> copy the URL</div>
             </div>
 
             <div class="form-group" id="localGroup" style="display: none;">
@@ -112,7 +112,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             </div>
 
             <div class="form-group">
-                <label for="assetSize">Size (pixels, or leave blank for 180):</label>
+                <label for="assetSize">Size in pixels (or leave blank for 180px):</label>
                 <input type="number" id="assetSize" placeholder="180" min="40" max="500">
                 <div class="info-text">- Companion width in pixels (min: 40, max: 500)</div>
             </div>
@@ -122,9 +122,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 <select id="startPosition">
                     <option value="center">Center</option>
                     <option value="topLeft">Top Left</option>
-                    <option value="topRight">Top Right</option>
-                    <option value="bottomLeft">Bottom Left</option>
-                    <option value="bottomRight">Bottom Right</option>
                 </select>
             </div>
 
