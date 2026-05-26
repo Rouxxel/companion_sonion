@@ -1,12 +1,24 @@
 import * as vscode from 'vscode';
+import { CompanionManager } from './CompanionManager';
 
 export class CompanionPanel {
     public static currentPanel: CompanionPanel | undefined;
 
     private panel: vscode.WebviewPanel;
 
-    constructor(extensionUri: vscode.Uri) {
+    private startRenderLoop() {
+        setInterval(() => {
+            this.panel.webview.postMessage({
+                command: 'render',
+                companions: this.manager.getAll()
+            });
+        }, 100);
+    }
 
+    constructor(
+        extensionUri: vscode.Uri,
+        private manager: CompanionManager
+    ){
         this.panel = vscode.window.createWebviewPanel(
             'companionPanel',
             'Companion',
@@ -17,13 +29,64 @@ export class CompanionPanel {
             }
         );
 
-        this.panel.webview.onDidReceiveMessage(msg => {
+        //this.panel.webview.onDidReceiveMessage(msg => {
+        //    if (msg.command === 'savePosition') {
+        //        // save in extension side (we will wire storage next step)
+        //        console.log(msg.x, msg.y);
+        //    }
+        //});
+
+        CompanionPanel.currentPanel = this;
+
+        this.panel.onDidDispose(() => {
+            CompanionPanel.currentPanel = undefined;
+        });
+
+        this.panel.webview.onDidReceiveMessage(async (msg) => {
             if (msg.command === 'savePosition') {
-                // save in extension side (we will wire storage next step)
-                console.log(msg.x, msg.y);
+                this.manager.update(msg.id, {
+                    x: parseInt(msg.x),
+                    y: parseInt(msg.y)
+                });
+            }
+
+            if (msg.command === 'resize') {
+                this.manager.update(msg.id, {
+                    size: msg.size
+                });
+            }
+
+            if (msg.command === 'contextMenu') {
+                const id = msg.id;
+                const companion = this.manager.get(id);
+                if (!companion) return;
+
+                const choice = await vscode.window.showQuickPick([
+                    'Toggle Lock',
+                    'Delete',
+                    'Change Asset URL'
+                ], { placeHolder: 'Companion actions' });
+
+                if (!choice) return;
+
+                if (choice === 'Toggle Lock') {
+                    this.manager.update(id, { locked: !companion.locked });
+                }
+
+                if (choice === 'Delete') {
+                    this.manager.delete(id);
+                }
+
+                if (choice === 'Change Asset URL') {
+                    const url = await vscode.window.showInputBox({ prompt: 'Enter new asset URL', value: companion.assetPath });
+                    if (url) {
+                        this.manager.update(id, { assetPath: url });
+                    }
+                }
             }
         });
 
+        this.startRenderLoop();
         this.panel.webview.html = this.getHtml();
     }
 
@@ -34,64 +97,131 @@ export class CompanionPanel {
         <body style="margin:0; overflow:hidden;">
 
             <style>
-                img#companion {
+                #world {
+                    position: relative;
+                    width: 100vw;
+                    height: 100vh;
+                }
+
+                img.companion {
                     position: absolute;
-                    width: 180px;
-                    left: 100px;
-                    top: 100px;
                     -webkit-user-drag: none;
                 }
 
-                img#companion:hover {
+                img.companion:hover {
                     opacity: 0.3;
                     cursor: grab;
                 }
             </style>
 
-            <img id="companion"
-                src="https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif"
-                draggable="false"
-            />
+            <div id="world"></div>
 
             <script>
-                const img = document.getElementById('companion');
                 const vscode = acquireVsCodeApi();
+                const world = document.getElementById('world');
 
-                let isDragging = false;
-                let offsetX = 0;
-                let offsetY = 0;
+                let companions = [];
 
-                // prevent native image drag
-                img.ondragstart = () => false;
-
-                img.addEventListener('mousedown', (e) => {
-                    isDragging = true;
-                    const rect = img.getBoundingClientRect();
-                    offsetX = e.clientX - rect.left;
-                    offsetY = e.clientY - rect.top;
-                    img.style.cursor = 'grabbing';
+                window.addEventListener('message', event => {
+                    if (event.data.command === 'render') {
+                        companions = event.data.companions;
+                        render();
+                    }
                 });
 
-                document.addEventListener('mousemove', (e) => {
-                    if (!isDragging) return;
+                const dragState = {
+                    item: null,
+                    id: null,
+                    offsetX: 0,
+                    offsetY: 0
+                };
 
-                    img.style.left = (e.clientX - offsetX) + "px";
-                    img.style.top = (e.clientY - offsetY) + "px";
+                document.addEventListener('mousemove', (e) => {
+                    if (!dragState.item) return;
+
+                    dragState.item.style.left = (e.clientX - dragState.offsetX) + 'px';
+                    dragState.item.style.top = (e.clientY - dragState.offsetY) + 'px';
                 });
 
                 document.addEventListener('mouseup', () => {
-                    if (!isDragging) return;
-                    isDragging = false;
-                    img.style.cursor = '';
+                    if (!dragState.item) return;
+
+                    dragState.item.style.cursor = 'grab';
 
                     vscode.postMessage({
                         command: 'savePosition',
-                        x: img.style.left,
-                        y: img.style.top
+                        id: dragState.id,
+                        x: dragState.item.style.left,
+                        y: dragState.item.style.top
                     });
-                });
-            </script>
 
+                    dragState.item = null;
+                    dragState.id = null;
+                });
+
+                function render() {
+                    if (dragState.item) {
+                        return;
+                    }
+
+                    world.innerHTML = '';
+
+                    companions.forEach(c => {
+                        const img = document.createElement('img');
+
+                        img.className = 'companion';
+                        img.src = c.assetPath;
+                        img.draggable = false;
+                        img.style.left = c.x + 'px';
+                        img.style.top = c.y + 'px';
+                        img.style.width = c.size + 'px';
+                        img.style.opacity = 1;
+                        img.style.cursor = c.locked ? 'not-allowed' : 'grab';
+
+                        img.addEventListener('mousedown', (e) => {
+                            if (c.locked) return;
+                            e.preventDefault();
+
+                            dragState.item = img;
+                            dragState.id = c.id;
+                            dragState.offsetX = e.clientX - img.offsetLeft;
+                            dragState.offsetY = e.clientY - img.offsetTop;
+                            img.style.cursor = 'grabbing';
+                        });
+
+                        img.addEventListener('wheel', (e) => {
+                            e.preventDefault();
+
+                            const size = Math.max(40, c.size + (e.deltaY < 0 ? 10 : -10));
+
+                            vscode.postMessage({
+                                command: 'resize',
+                                id: c.id,
+                                size
+                            });
+                        });
+
+                        img.addEventListener('contextmenu', (e) => {
+                            e.preventDefault();
+
+                            vscode.postMessage({
+                                command: 'contextMenu',
+                                id: c.id
+                            });
+                        });
+
+                        img.addEventListener('mouseenter', () => {
+                            img.style.opacity = 0.3;
+                        });
+
+                        img.addEventListener('mouseleave', () => {
+                            img.style.opacity = 1;
+                        });
+
+                        world.appendChild(img);
+                    });
+                }
+            </script>
         </body>
         </html>
         `;
