@@ -35,7 +35,11 @@
     "commands": [
       {
         "command": "companion-sonion.helloWorld",
-        "title": "Hello World"
+        "title": "Your companion is here!"
+      },
+      {
+        "command": "companion.spawn",
+        "title": "Spawn Companion"
       }
     ],
 
