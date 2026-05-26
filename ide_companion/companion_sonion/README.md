@@ -2,6 +2,8 @@
 
 A VS Code extension that brings animated companions into your editor. Spawn, customize, and manage multiple GIF/PNG/WebM companions that persist across sessions.
 
+To generate .vsix navigate to companion_sonion folder and run `vsce package` (requirements are `npm install -g @vscode/vsce` and Node.js of course)
+
 ![Sonion](media/sonion.jpeg)
 
 ## Features
