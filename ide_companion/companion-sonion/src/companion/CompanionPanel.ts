@@ -25,7 +25,7 @@ export class CompanionPanel {
         this.panel = vscode.window.createWebviewPanel(
             'companionPanel',
             'Companion',
-            vscode.ViewColumn.Active,
+            vscode.ViewColumn.Beside,
             {
                 enableScripts: true,
                 retainContextWhenHidden: true

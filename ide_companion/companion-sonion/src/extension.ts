@@ -17,9 +17,6 @@ export function activate(context: vscode.ExtensionContext) {
     // STATE LAYER
     const manager = new CompanionManager(context.globalState, context.globalStorageUri);
 
-    // UI LAYER
-    const panel = new CompanionPanel(context.extensionUri, manager);
-
     // spawn command = just "add companion"
     context.subscriptions.push(
         vscode.commands.registerCommand('companion.spawn', async (options?: { assetPath?: string; localAssetUri?: string; size?: number; x?: number; y?: number }) => {
@@ -47,6 +44,11 @@ export function activate(context: vscode.ExtensionContext) {
                 locked: false
             });
 
+            // Check if panel exists and is not disposed, otherwise create new one
+            let panel = CompanionPanel.currentPanel;
+            if (!panel) {
+                panel = new CompanionPanel(context.extensionUri, manager);
+            }
             panel.show();
         })
     );
