@@ -73,20 +73,20 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         <html>
         <head>
             <style>
-                body { font-family: var(--vscode-font-family); padding: 12px; }
+                body { font-family: var(--vscode-font-family); padding: 0.75rem; }
                 h2 { margin-top: 0; }
-                .form-group { margin-bottom: 12px; }
-                label { display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px; }
-                input, select { width: 100%; box-sizing: border-box; padding: 6px; border: 1px solid var(--vscode-input-border); background: var(--vscode-input-background); color: var(--vscode-input-foreground); }
+                .form-group { margin-bottom: 0.75rem; }
+                label { display: block; font-weight: 500; margin-bottom: 0.25rem; font-size: 0.75rem; }
+                input, select { width: 100%; box-sizing: border-box; padding: 0.375rem; border: 0.0625rem solid var(--vscode-input-border); background: var(--vscode-input-background); color: var(--vscode-input-foreground); }
                 input:focus, select:focus { outline: none; border-color: var(--vscode-focusBorder); }
                 input:disabled, button:disabled { opacity: 0.5; cursor: not-allowed; }
-                button { width: 100%; padding: 8px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; cursor: pointer; font-size: 13px; margin-top: 8px; }
+                button { width: 100%; padding: 0.5rem; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; cursor: pointer; font-size: 0.8125rem; margin-top: 0.5rem }
                 button:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
-                .info-text { font-size: 11px; color: var(--vscode-descriptionForeground); margin-top: 2px; }
-                .mode-switch { display: flex; gap: 8px; margin-bottom: 12px; }
+                .info-text { font-size: 0.6875rem; color: var(--vscode-descriptionForeground); margin-top: 0.125rem; }
+                .mode-switch { display: flex; gap: 0.5rem margin-bottom: 0.75rem; }
                 .mode-switch button { flex: 1; margin-top: 0; }
                 .mode-switch button.active { background: var(--vscode-button-secondaryHoverBackground); }
-                .clear-btn { width: auto; padding: 4px 8px; font-size: 11px; margin-top: 4px; background: var(--vscode-errorForeground); }
+                .clear-btn { width: auto; padding: 0.25rem 0.5rem font-size: 0.6875rem; margin-top: 0.25rem; color: var(--vscode-button-foreground); }
             </style>
         </head>
         <body>
