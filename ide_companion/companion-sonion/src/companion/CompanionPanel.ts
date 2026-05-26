@@ -95,6 +95,10 @@ export class CompanionPanel {
                     }
                 }
             }
+
+            if (msg.command === 'delete') {
+                this.manager.delete(msg.id);
+            }
         });
 
         this.startRenderLoop();
@@ -237,6 +241,15 @@ export class CompanionPanel {
 
                             vscode.postMessage({
                                 command: 'contextMenu',
+                                id: c.id
+                            });
+                        });
+
+                        img.addEventListener('dblclick', (e) => {
+                            e.preventDefault();
+
+                            vscode.postMessage({
+                                command: 'delete',
                                 id: c.id
                             });
                         });
