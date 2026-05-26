@@ -1,71 +1,96 @@
-# companion-sonion README
+# companion-sonion
 
-This is the README for your extension "companion-sonion". After writing up a brief description, we recommend including the following sections.
+A VS Code extension that brings animated companions into your editor. Spawn, customize, and manage multiple GIF/PNG/WebM companions that persist across sessions.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- **Spawn Companions**: Quickly add multiple animated companions to your workspace via the sidebar button or command palette
+- **Drag & Drop**: Click and hold to move companions around the webview freely
+- **Resize**: Use mouse wheel to scale companions up or down (Must be hovering over them to take effect)
+- **Hover Effect**: Companions fade to 30% opacity when you hover over them, with cursor changing to a grab hand
+- **Lock/Unlock**: Prevent accidental movement by locking a companion (right-click context menu)
+- **Delete**: Double-click any companion to instantly remove it
+- **Custom Assets**: Change companion images via URL or import local image files (PNG, JPG, GIF, WebM)
+- **Profiles**: Save and load entire companion layouts as named profiles
+- **Import/Export**: Export your world state to JSON and import it later to restore your companions
+- **Persistence**: All companion positions, sizes, and settings are automatically saved and restored on startup
 
-For example if there is an image subfolder under your extension project workspace:
+## Usage
 
-\!\[feature X\]\(images/feature-x.png\)
+### Basic Controls
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+1. **Spawn a Companion**
+   - Click "Spawn Companion" button in the Companion sidebar, or
+   - Run command: `Companion: Spawn Companion` (Ctrl+Shift+P)
 
-## Requirements
+2. **Move a Companion**
+   - Click and hold on a companion, then drag to reposition
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+3. **Resize a Companion**
+   - Hover over a companion and scroll the mouse wheel up (enlarge) or down (shrink)
+
+4. **Delete a Companion**
+   - Double-click on any companion to remove it immediately
+
+5. **Access Companion Menu**
+   - Right-click on a companion to open the context menu with options:
+     - **Toggle Lock**: Prevent/allow movement
+     - **Delete**: Remove the companion
+     - **Change Asset URL**: Update the image URL
+     - **Import Local Asset**: Select a local image file to use
+
+### Profiles
+
+Save and restore companion layouts:
+
+- **Save Profile**: Run `Companion: Save Companion Profile` (Ctrl+Shift+P)
+  - Enter a profile name to save the current state
+
+- **Load Profile**: Run `Companion: Load Companion Profile` (Ctrl+Shift+P)
+  - Select a saved profile to restore its companions
+
+### Import / Export
+
+- **Export World**: Run `Companion: Export Companion World`
+  - Save all companions to a JSON file
+
+- **Import World**: Run `Companion: Import Companion World`
+  - Load companions from a previously exported JSON file
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+This extension contributes the following commands:
 
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+- `companion.spawn`: Spawn a new companion
+- `companion.saveProfile`: Save current companions as a named profile
+- `companion.loadProfile`: Load a saved profile
+- `companion.exportWorld`: Export companions to JSON
+- `companion.importWorld`: Import companions from JSON
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- Companions reset on extension reload (use profiles to save state)
+- Large images or high refresh rates may impact performance
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+### 0.1.0
 
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+- Drag and drop movement
+- Resize with mouse wheel
+- Lock/unlock companions
+- Context menu actions
+- Profile save/load
+- Import/export world state
+- Local asset import
+- Persistent storage via VS Code globalState
 
 ---
 
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
 ## For more information
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+- [VS Code Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+- [VS Code Webview API](https://code.visualstudio.com/api/extension-guides/webview)
 
-**Enjoy!**
+**Enjoy your coding companion!**
+
