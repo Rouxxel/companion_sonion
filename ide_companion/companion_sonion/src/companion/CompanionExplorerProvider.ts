@@ -31,6 +31,13 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider {
             this.postRender();
         });
 
+        // Re-render when the view becomes visible (e.g., when user opens Explorer sidebar)
+        webviewView.onDidChangeVisibility(() => {
+            if (webviewView.visible) {
+                this.postRender();
+            }
+        });
+
         // Handle messages from the webview
         webviewView.webview.onDidReceiveMessage(async (msg) => {
             if (msg.command === 'savePosition') {
