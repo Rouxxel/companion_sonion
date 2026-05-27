@@ -19,7 +19,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.onDidReceiveMessage(async message => {
             if (message.command === 'spawn') {
-                const { assetPath, localAssetUri, size, position } = message;
+                const { assetPath, localAssetUri, size, position, renderMode } = message;
 
                 // Calculate coordinates as percentages (0-1) based on position
                 const positions: Record<string, { x: number; y: number }> = {
@@ -37,7 +37,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     localAssetUri: localAssetUri || undefined,
                     size: size || undefined,
                     x: coords.x,
-                    y: coords.y
+                    y: coords.y,
+                    renderMode: renderMode || 'panel'
                 });
             }
 
@@ -127,6 +128,15 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     <option value="bottomRight">Bottom Right</option>
                 </select>
             </div>
+            <div class="form-group">
+                <label for="renderMode">Render Mode:</label>
+                <select id="renderMode">
+                    <option value="panel">Panel (floating window)</option>
+                    <option value="explorer">Explorer (sidebar)</option>
+                </select>
+                <div class="info-text">- Panel: free movement in a split editor tab</div>
+                <div class="info-text">- Explorer: compact view inside the Explorer sidebar</div>
+            </div>
 
             <button onclick="spawn()">Spawn Companion</button>
 
@@ -169,13 +179,15 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     const assetUrl = document.getElementById('assetUrl').value || '';
                     const sizeStr = document.getElementById('assetSize').value || '';
                     const position = document.getElementById('startPosition').value || 'center';
+                    const renderMode = document.getElementById('renderMode').value || 'panel';
 
                     const payload = {
                         command: 'spawn',
                         assetPath: currentMode === 'url' ? assetUrl : undefined,
                         localAssetUri: currentMode === 'local' ? localAssetPath : undefined,
                         size: sizeStr ? parseInt(sizeStr) : undefined,
-                        position: position
+                        position: position,
+                        renderMode: renderMode
                     };
 
                     console.log('[spawn] sending payload:', payload);

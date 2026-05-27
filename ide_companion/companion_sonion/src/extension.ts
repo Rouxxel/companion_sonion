@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { SidebarProvider } from './sidebar/SidebarProvider';
 import { CompanionPanel } from './companion/CompanionPanel';
 import { CompanionManager } from './companion/CompanionManager';
+import { CompanionExplorerProvider } from './companion/CompanionExplorerProvider';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -17,9 +18,18 @@ export function activate(context: vscode.ExtensionContext) {
     // STATE LAYER
     const manager = new CompanionManager(context.globalState, context.globalStorageUri);
 
-    // spawn command = just "add companion"
+    // EXPLORER SIDEBAR PROVIDER
+    const explorerProvider = new CompanionExplorerProvider(context.extensionUri, manager);
     context.subscriptions.push(
-        vscode.commands.registerCommand('companion.spawn', async (options?: { assetPath?: string; localAssetUri?: string; size?: number; x?: number; y?: number }) => {
+        vscode.window.registerWebviewViewProvider(
+            'companionExplorer',
+            explorerProvider
+        )
+    );
+
+    // spawn command = just "add companion" (panel mode by default)
+    context.subscriptions.push(
+        vscode.commands.registerCommand('companion.spawn', async (options?: { assetPath?: string; localAssetUri?: string; size?: number; x?: number; y?: number; renderMode?: 'panel' | 'explorer' }) => {
 
             const defaultAssetPath = "https://media1.tenor.com/m/Wqi3Xrnz2wwAAAAd/mambo-umamusume.gif";
             const defaultSize = 180;
@@ -35,21 +45,68 @@ export function activate(context: vscode.ExtensionContext) {
                 }
             }
 
+            const renderMode = options?.renderMode || 'panel';
+
             manager.create({
                 id: Date.now().toString(),
                 x: options?.x ?? defaultX,
                 y: options?.y ?? defaultY,
                 size: options?.size ?? defaultSize,
                 assetPath: assetPath,
-                locked: false
+                locked: false,
+                renderMode: renderMode
             });
 
-            // Check if panel exists and is not disposed, otherwise create new one
-            let panel = CompanionPanel.currentPanel;
-            if (!panel) {
-                panel = new CompanionPanel(context.extensionUri, manager);
+            // Only open panel if spawning in panel mode
+            if (renderMode === 'panel') {
+                let panel = CompanionPanel.currentPanel;
+                if (!panel) {
+                    panel = new CompanionPanel(context.extensionUri, manager);
+                }
+                panel.show();
             }
-            panel.show();
+        })
+    );
+
+    // Spawn directly into Explorer mode
+    context.subscriptions.push(
+        vscode.commands.registerCommand('companion.spawnExplorer', async (options?: { assetPath?: string; localAssetUri?: string; size?: number; x?: number; y?: number }) => {
+            await vscode.commands.executeCommand('companion.spawn', {
+                ...options,
+                renderMode: 'explorer'
+            });
+        })
+    );
+
+    // Move a panel companion to explorer
+    context.subscriptions.push(
+        vscode.commands.registerCommand('companion.moveToExplorer', async () => {
+            const panelCompanions = manager.getAllForMode('panel');
+            if (panelCompanions.length === 0) {
+                vscode.window.showInformationMessage('No panel companions to move');
+                return;
+            }
+            const items = panelCompanions.map(c => ({ label: c.id, description: c.assetPath }));
+            const pick = await vscode.window.showQuickPick(items, { placeHolder: 'Select companion to move to Explorer' });
+            if (!pick) { return; }
+            manager.moveToMode(pick.label, 'explorer');
+            vscode.window.showInformationMessage('Companion moved to Explorer');
+        })
+    );
+
+    // Move an explorer companion to panel
+    context.subscriptions.push(
+        vscode.commands.registerCommand('companion.moveToPanel', async () => {
+            const explorerCompanions = manager.getAllForMode('explorer');
+            if (explorerCompanions.length === 0) {
+                vscode.window.showInformationMessage('No explorer companions to move');
+                return;
+            }
+            const items = explorerCompanions.map(c => ({ label: c.id, description: c.assetPath }));
+            const pick = await vscode.window.showQuickPick(items, { placeHolder: 'Select companion to move to Panel' });
+            if (!pick) { return; }
+            manager.moveToMode(pick.label, 'panel');
+            vscode.window.showInformationMessage('Companion moved to Panel');
         })
     );
 

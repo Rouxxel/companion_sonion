@@ -14,9 +14,7 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onView:companionSidebar.view"
-  ],
+  "activationEvents": [],
   "main": "./out/extension.js",
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -47,6 +45,18 @@
         "title": "Spawn Companion"
       },
       {
+        "command": "companion.spawnExplorer",
+        "title": "Companion: Spawn In Explorer"
+      },
+      {
+        "command": "companion.moveToExplorer",
+        "title": "Companion: Move To Explorer"
+      },
+      {
+        "command": "companion.moveToPanel",
+        "title": "Companion: Move To Panel"
+      },
+      {
         "command": "companion.saveProfile",
         "title": "Save Companion Profile"
       },
@@ -69,7 +79,7 @@
         {
           "id": "codingCompanion",
           "title": "Companion",
-          "icon": "https://github.com/Rouxxel/companion_sonion/blob/main/ide_companion/companion_sonion/media/icon.png?raw=true"
+          "icon": "media/icon.png"
         }
       ]
     },
@@ -80,7 +90,15 @@
           "type": "webview",
           "id": "companionSidebar",
           "name": "Companion Settings",
-          "icon": "https://github.com/Rouxxel/companion_sonion/blob/main/ide_companion/companion_sonion/media/icon.png?raw=true"
+          "icon": "media/icon.png"
+        }
+      ],
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "companionExplorer",
+          "name": "Companion Sonion",
+          "icon": "media/icon.png"
         }
       ]
     }
