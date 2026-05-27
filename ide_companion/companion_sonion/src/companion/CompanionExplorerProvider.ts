@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { CompanionManager } from './CompanionManager';
 import { Companion } from './Companion';
 import { getCompanionHtml } from './companionHtml';
+import { CompanionPanel } from './CompanionPanel';
 
 /**
  * Renders companions inside the VS Code Explorer sidebar
@@ -109,6 +110,12 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider {
 
                 if (choice === 'Move to Panel') {
                     this.manager.moveToMode(id, 'panel');
+                    // Open the panel if it's not already open
+                    let panel = CompanionPanel.currentPanel;
+                    if (!panel) {
+                        panel = new CompanionPanel(this.extensionUri, this.manager);
+                    }
+                    panel.show();
                 }
             }
 
