@@ -5,4 +5,5 @@ export interface Companion {
     size: number;
     assetPath: string;
     locked: boolean;
+    renderMode?: 'panel' | 'explorer'; // defaults to 'panel' when undefined
 }
