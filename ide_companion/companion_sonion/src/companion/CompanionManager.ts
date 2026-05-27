@@ -56,6 +56,18 @@ export class CompanionManager {
         return Array.from(this.companions.values());
     }
 
+    getAllForMode(mode: 'panel' | 'explorer') {
+        return this.getAll().filter(c => {
+            const m = c.renderMode || 'panel';
+            return m === mode;
+        });
+    }
+
+    moveToMode(id: string, mode: 'panel' | 'explorer') {
+        this.update(id, { renderMode: mode });
+        console.log(`[moveToMode] Moved companion ${id} to ${mode}`);
+    }
+
     // Profiles
     async saveProfile(name: string) {
         if (!this.storage) return;
