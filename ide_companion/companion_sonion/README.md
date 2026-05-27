@@ -8,6 +8,7 @@ To generate .vsix locally navigate to companion_sonion folder and run `vsce pack
 
 ## Features
 
+- **Two Render Modes**: Choose between Panel mode (floating window) or Explorer mode (sidebar integration)
 - **Spawn Companions**: Quickly add multiple animated companions to your workspace via the sidebar button or command palette
 - **Drag & Drop**: Click and hold to move companions around the webview freely
 - **Resize**: Use mouse wheel to scale companions up or down (Must be hovering over them to take effect)
@@ -19,6 +20,8 @@ To generate .vsix locally navigate to companion_sonion folder and run `vsce pack
 - **Clear Local Asset**: Option to clear local file selection and switch back to URL mode
 - **Relative Positioning**: Companions use percentage-based positioning (0-1) relative to window size for consistent placement across different screen sizes
 - **Split Panel View**: Companion panel opens in split right view for better workspace integration
+- **Explorer Sidebar Integration**: Render companions directly in the Explorer sidebar for a compact, always-visible view
+- **Mode Switching**: Move companions between Panel and Explorer modes via right-click context menu
 - **Profiles**: Save and load entire companion layouts as named profiles
 - **Import/Export**: Export your world state to JSON and import it later to restore your companions
 - **Persistence**: All companion positions, sizes, and settings are automatically saved and restored on startup
@@ -27,26 +30,47 @@ To generate .vsix locally navigate to companion_sonion folder and run `vsce pack
 
 ### Basic Controls
 
-1. **Spawn a Companion**
+1. **Choose Render Mode**
+   - Use the "Render Mode" dropdown in the Companion sidebar to select:
+     - **Panel**: Floating window with free movement
+     - **Explorer**: Compact view inside the Explorer sidebar
+
+2. **Spawn a Companion**
    - Click "Spawn Companion" button in the Companion sidebar, or
-   - Run command: `Companion: Spawn Companion` (Ctrl+Shift+P)
+   - Run command: `Companion: Spawn Companion` (Ctrl+Shift+P) for Panel mode
+   - Run command: `Companion: Spawn In Explorer` (Ctrl+Shift+P) for Explorer mode
 
-2. **Move a Companion**
+3. **Move a Companion**
    - Click and hold on a companion, then drag to reposition
+   - In Explorer mode, movement is constrained to the sidebar viewport
 
-3. **Resize a Companion**
+4. **Resize a Companion**
    - Hover over a companion and scroll the mouse wheel up (enlarge) or down (shrink)
+   - Explorer mode: 30-200px range
+   - Panel mode: 40px+ range
 
-4. **Delete a Companion**
+5. **Delete a Companion**
    - Double-click on any companion to remove it immediately
 
-5. **Access Companion Menu**
+6. **Access Companion Menu**
    - Right-click on a companion to open the context menu with options:
      - **Toggle Lock**: Prevent/allow movement
      - **Delete**: Remove the companion
      - **Change Asset URL**: Update the image URL
      - **Import Local Asset**: Select a local image file to use
      - **Clear Local Asset (Switch to URL)**: Clear local file selection and switch to URL mode (only shown when local asset is active)
+     - **Move to Explorer**: Move companion from Panel to Explorer mode (Panel only)
+     - **Move to Panel**: Move companion from Explorer to Panel mode (Explorer only)
+
+### Mode Switching
+
+Move companions between render modes:
+
+- **Move to Explorer**: Right-click a Panel companion → "Move to Explorer"
+- **Move to Panel**: Right-click an Explorer companion → "Move to Panel"
+- **Quick Move Commands**:
+  - `Companion: Move To Explorer` (Ctrl+Shift+P)
+  - `Companion: Move To Panel` (Ctrl+Shift+P)
 
 ### Profiles
 
@@ -70,7 +94,10 @@ Save and restore companion layouts:
 
 This extension contributes the following commands:
 
-- `companion.spawn`: Spawn a new companion
+- `companion.spawn`: Spawn a new companion (Panel mode by default)
+- `companion.spawnExplorer`: Spawn a companion in Explorer mode
+- `companion.moveToExplorer`: Move a Panel companion to Explorer mode
+- `companion.moveToPanel`: Move an Explorer companion to Panel mode
 - `companion.saveProfile`: Save current companions as a named profile
 - `companion.loadProfile`: Load a saved profile
 - `companion.exportWorld`: Export companions to JSON
@@ -80,8 +107,18 @@ This extension contributes the following commands:
 
 - Companions reset on extension reload (use profiles to save state)
 - Large images or high refresh rates may impact performance
+- Explorer mode companions are constrained to the sidebar viewport and cannot overlay native Explorer content
 
 ## Release Notes
+
+### 0.1.2
+
+- Added Explorer sidebar render mode
+- Mode switching between Panel and Explorer
+- Companion visibility handling in Explorer view
+- Render mode selection in sidebar UI
+- Move to Explorer/Panel commands
+- Improved webview disposal handling
 
 ### 0.1.0
 
