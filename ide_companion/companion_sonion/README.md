@@ -111,7 +111,7 @@ This extension contributes the following commands:
 
 ## Release Notes
 
-### 0.1.2
+### 0.2.0
 
 - Added Explorer sidebar render mode
 - Mode switching between Panel and Explorer
