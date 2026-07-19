@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: http: https:; media-src 'self' file: http: https:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <title>Sonion companion</title>
+    <link rel="stylesheet" href="companion-window.css" />
+  </head>
+  <body>
+    <main aria-label="Desktop companion">
+      <img id="companion-image" src="../assets/default.svg" alt="Sonion companion" draggable="false" />
+      <video id="companion-video" aria-label="Sonion companion video" autoplay loop muted playsinline hidden></video>
+      <section id="context-menu" class="context-menu" aria-label="Companion actions" hidden>
+        <button type="button" data-action="toggle-lock">Lock position</button>
+        <button type="button" data-action="bring-to-front">Bring to front</button>
+        <button type="button" data-action="change-url">Change asset URL</button>
+        <button type="button" data-action="import-local">Import local asset</button>
+        <button type="button" data-action="clear-local">Clear local asset</button>
+        <hr />
+        <button type="button" class="danger" data-action="delete">Delete companion</button>
+      </section>
+      <form id="url-dialog" class="url-dialog" hidden>
+        <label for="asset-url">Image or video URL</label>
+        <input id="asset-url" name="asset-url" type="url" placeholder="https://example.com/companion.gif" autocomplete="url" required />
+        <p id="url-error" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button type="button" data-action="cancel-url">Cancel</button>
+          <button type="submit">Use URL</button>
+        </div>
+      </form>
+    </main>
+    <script src="companion-window.js"></script>
+  </body>
+</html>
