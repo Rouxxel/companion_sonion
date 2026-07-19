@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+    <title>Companion settings</title>
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Sonion Companion</h1>
+      <form id="settings-form">
+        <label><input id="always-on-top" type="checkbox" /> Keep companions on top</label>
+        <label>Default size <input id="default-size" type="number" min="40" max="500" required /> px</label>
+        <label>Minimum size <input id="min-size" type="number" min="16" max="2000" required /> px</label>
+        <label>Maximum size <input id="max-size" type="number" min="16" max="2000" required /> px</label>
+        <label>Maximum companions <input id="max-companions" type="number" min="1" max="100" required /></label>
+        <button type="submit">Save settings</button>
+      </form>
+      <section class="actions"><button id="add-companion" type="button">Add companion</button></section>
+      <section aria-labelledby="profiles-heading">
+        <h2 id="profiles-heading">Layouts</h2>
+        <div class="profiles"><select id="profiles" aria-label="Saved layouts"></select><button id="load-profile" type="button">Load</button><button id="delete-profile" type="button">Delete</button></div>
+        <div class="profiles"><input id="profile-name" maxlength="80" placeholder="Layout name" /><button id="save-profile" type="button">Save current layout</button></div>
+      </section>
+      <p id="status" role="status"></p>
+      <p class="hint">Shortcuts: Ctrl/Cmd+Shift+A adds a companion; Ctrl/Cmd+Shift+S opens this panel.</p>
+    </main>
+    <script src="settings.js"></script>
+  </body>
+</html>

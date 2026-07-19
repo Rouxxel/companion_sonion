@@ -1,0 +1,8 @@
+:root { color-scheme: dark; font: 14px/1.4 system-ui, sans-serif; background: #18181c; color: #f6f4f7; }
+body { margin: 0; } main { max-width: 430px; margin: auto; padding: 20px; }
+h1, h2 { margin: 0 0 14px; } h2 { margin-top: 22px; font-size: 16px; }
+form { display: grid; gap: 10px; } label { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+input, select, button { font: inherit; } input[type="number"] { width: 80px; } input:not([type="checkbox"]), select { padding: 5px 7px; }
+button { padding: 7px 10px; cursor: pointer; } .actions { margin-top: 14px; }
+.profiles { display: flex; gap: 8px; margin: 8px 0; } .profiles select, .profiles input { min-width: 0; flex: 1; }
+#status { min-height: 1.4em; color: #a9e7bd; } .hint { color: #b5b2bb; font-size: 12px; }
