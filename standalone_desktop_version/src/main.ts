@@ -205,13 +205,15 @@ function registerIpc(): void {
     const found = senderCompanion(event); if (!found || !isFiniteNumber(delta?.x) || !isFiniteNumber(delta?.y)) return undefined;
     const [id, window] = found; const current = manager.get(id); if (!current || current.locked) return undefined;
     const bounds = window.getBounds(); const display = displayFor(window);
-    const moved = { ...bounds, x: Math.round(bounds.x + Math.max(-500, Math.min(500, delta.x))), y: Math.round(bounds.y + Math.max(-500, Math.min(500, delta.y))) };
-    // Normalize using actual window dimensions so aspect-ratio-adjusted windows stay consistent
+    const newX = Math.round(bounds.x + Math.max(-500, Math.min(500, delta.x)));
+    const newY = Math.round(bounds.y + Math.max(-500, Math.min(500, delta.y)));
+    // Only reposition, don't touch width/height to avoid DPI rounding growth
+    window.setPosition(newX, newY);
+    // Normalize using actual window dimensions
     const area = display.workArea;
-    const nx = Math.max(0, Math.min(1, (moved.x - area.x) / Math.max(1, area.width - bounds.width)));
-    const ny = Math.max(0, Math.min(1, (moved.y - area.y) / Math.max(1, area.height - bounds.height)));
+    const nx = Math.max(0, Math.min(1, (newX - area.x) / Math.max(1, area.width - bounds.width)));
+    const ny = Math.max(0, Math.min(1, (newY - area.y) / Math.max(1, area.height - bounds.height)));
     manager.update(id, { x: nx, y: ny });
-    window.setBounds(moved);
     return undefined;
   });
   ipcMain.handle("companion:resize", async (event, delta: number) => {

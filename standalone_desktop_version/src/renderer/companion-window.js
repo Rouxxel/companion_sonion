@@ -90,9 +90,16 @@
   const showMenu = (event) => {
     event.preventDefault();
     hideUrlDialog();
+    // If menu is already open, just reposition it without expanding again
+    if (menuOpen) {
+      const margin = 4;
+      menu.style.left = `${Math.max(margin, Math.min(event.clientX, window.innerWidth - menu.offsetWidth - margin))}px`;
+      menu.style.top = `${Math.max(margin, Math.min(event.clientY, window.innerHeight - menu.offsetHeight - margin))}px`;
+      return;
+    }
     // Temporarily expand window so the menu isn't clipped
     const menuWidth = 180;
-    const menuHeight = 220;
+    const menuHeight = 260;
     const neededWidth = Math.max(window.innerWidth, event.clientX + menuWidth + 8);
     const neededHeight = Math.max(window.innerHeight, event.clientY + menuHeight + 8);
     if (neededWidth > window.innerWidth || neededHeight > window.innerHeight) {
