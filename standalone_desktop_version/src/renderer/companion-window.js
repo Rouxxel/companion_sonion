@@ -180,6 +180,7 @@
     if (action === "import-local") applyState(await call("chooseLocalAsset"));
     if (action === "clear-local") applyState(await call("clearLocalAsset"));
     if (action === "delete") await call("remove");
+    if (action === "add-companion") await call("addCompanion");
     if (action === "close-menu") { /* already hidden by hideMenu() above */ }
   });
 

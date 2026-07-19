@@ -289,6 +289,7 @@ function registerIpc(): void {
     window.setBounds({ x: cx - Math.round(w / 2), y: cy - Math.round(h / 2), width: w, height: h });
   });
   ipcMain.handle("companion:remove", (event) => { const found = senderCompanion(event); if (found) removeCompanion(found[0]); });
+  ipcMain.handle("companion:add-companion", () => { const companion = manager.create(); createCompanionWindow(companion); });
   ipcMain.handle("companion:choose-local-asset", async (event) => {
     const found = senderCompanion(event); if (!found) return undefined; const result = await dialog.showOpenDialog(found[1], { properties: ["openFile"], filters: [{ name: "Companion assets", extensions: [...ALLOWED_EXTENSIONS].map((x) => x.slice(1)) }] });
     if (result.canceled || !result.filePaths[0]) return sendState(found[0]); manager.update(found[0], { assetPath: validateLocalAsset(result.filePaths[0]), assetType: "local" }); return sendState(found[0]);
