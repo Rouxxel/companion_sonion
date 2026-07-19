@@ -235,6 +235,16 @@ function registerIpc(): void {
   });
   ipcMain.handle("companion:set-hover-opacity", (event, opacity: number) => { const found = senderCompanion(event); return found && isFiniteNumber(opacity) ? undefined : undefined; });
   ipcMain.handle("companion:toggle-lock", async (event) => { const found = senderCompanion(event); if (!found) return undefined; const current = manager.get(found[0]); if (!current) return undefined; manager.update(found[0], { locked: !current.locked }); return sendState(found[0]); });
+  ipcMain.handle("companion:toggle-always-on-top", async (event) => {
+    const found = senderCompanion(event); if (!found) return undefined;
+    const settings = manager.snapshot().settings;
+    const updated = manager.updateSettings({ alwaysOnTop: !settings.alwaysOnTop });
+    // Apply to all companion windows
+    for (const [id, win] of companionWindows) {
+      if (!win.isDestroyed()) win.setAlwaysOnTop(updated.alwaysOnTop);
+    }
+    return sendState(found[0]);
+  });
   ipcMain.handle("companion:bring-to-front", async (event) => {
     const found = senderCompanion(event); if (!found) return undefined;
     const [id, window] = found;

@@ -4,7 +4,7 @@ const invoke = <T>(channel: string, ...args: unknown[]) => ipcRenderer.invoke(ch
 
 contextBridge.exposeInMainWorld("companion", {
   getState: () => invoke("companion:get-state"), moveBy: (delta: { x: number; y: number }) => invoke("companion:move-by", delta), resize: (delta: number) => invoke("companion:resize", delta),
-  setHoverOpacity: (opacity: number) => invoke("companion:set-hover-opacity", opacity), toggleLock: () => invoke("companion:toggle-lock"), remove: () => invoke("companion:remove"),
+  setHoverOpacity: (opacity: number) => invoke("companion:set-hover-opacity", opacity), toggleLock: () => invoke("companion:toggle-lock"), toggleAlwaysOnTop: () => invoke("companion:toggle-always-on-top"), remove: () => invoke("companion:remove"),
   chooseLocalAsset: () => invoke("companion:choose-local-asset"), setAssetUrl: (url: string) => invoke("companion:set-asset-url", url), clearLocalAsset: () => invoke("companion:clear-local-asset"),
   bringToFront: () => invoke("companion:bring-to-front"), reportAssetError: () => invoke("companion:report-asset-error"),
   addCompanion: () => invoke("companion:add-companion"),

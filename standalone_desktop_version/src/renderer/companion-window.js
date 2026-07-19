@@ -26,8 +26,10 @@
   const urlInput = document.querySelector("#asset-url");
   const urlError = document.querySelector("#url-error");
   const lockButton = document.querySelector('[data-action="toggle-lock"]');
+  const onTopButton = document.querySelector('[data-action="toggle-on-top"]');
 
   let locked = false;
+  let alwaysOnTop = false;
   let dragging = false;
   let lastPointer = null;
   let menuOpen = false;
@@ -43,6 +45,10 @@
     if (typeof state.locked === "boolean") locked = state.locked;
     main.classList.toggle("locked", locked);
     lockButton.textContent = locked ? "Unlock position" : "Lock position";
+    if (state.settings && typeof state.settings.alwaysOnTop === "boolean") {
+      alwaysOnTop = state.settings.alwaysOnTop;
+      onTopButton.textContent = alwaysOnTop ? "✓ Always on top" : "Always on top";
+    }
     if (typeof state.assetUrl === "string" && state.assetUrl) setAsset(state.assetUrl);
     if (typeof state.opacity === "number") {
       image.style.opacity = String(state.opacity);
@@ -175,6 +181,7 @@
     const action = button.dataset.action;
     hideMenu();
     if (action === "toggle-lock") applyState(await call("toggleLock"));
+    if (action === "toggle-on-top") applyState(await call("toggleAlwaysOnTop"));
     if (action === "bring-to-front") await call("bringToFront");
     if (action === "change-url") showUrlDialog();
     if (action === "import-local") applyState(await call("chooseLocalAsset"));
