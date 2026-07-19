@@ -70,7 +70,7 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider {
                 ];
 
                 if (isLocalAsset) {
-                    choices.push('Clear Local Asset (Switch to URL)');
+                    choices.push('Clear current Asset (Switch to URL)');
                 }
 
                 const choice = await vscode.window.showQuickPick(choices, { placeHolder: 'Companion actions' });
@@ -101,7 +101,7 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider {
                     }
                 }
 
-                if (choice === 'Clear Local Asset (Switch to URL)') {
+                if (choice === 'Clear current Asset (Switch to URL)') {
                     const url = await vscode.window.showInputBox({ prompt: 'Enter new asset URL' });
                     if (url) {
                         this.manager.update(id, { assetPath: url });

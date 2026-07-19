@@ -80,7 +80,7 @@ export class CompanionPanel {
                 ];
 
                 if (isLocalAsset) {
-                    choices.push('Clear Local Asset (Switch to URL)');
+                    choices.push('Clear current Asset (Switch to URL)');
                 }
 
                 const choice = await vscode.window.showQuickPick(choices, { placeHolder: 'Companion actions' });
@@ -109,7 +109,7 @@ export class CompanionPanel {
                         this.manager.update(id, { assetPath: marker });
                     }
                 }
-                if (choice === 'Clear Local Asset (Switch to URL)') {
+                if (choice === 'Clear current Asset (Switch to URL)') {
                     const url = await vscode.window.showInputBox({ prompt: 'Enter new asset URL' });
                     if (url) {
                         this.manager.update(id, { assetPath: url });

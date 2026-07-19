@@ -52,6 +52,9 @@
 
   const setAsset = (assetPath) => {
     const isWebm = /\.webm(?:[?#]|$)/i.test(assetPath);
+    const currentSrc = isWebm ? video.src : image.src;
+    // Skip if asset hasn't changed to avoid re-triggering load/aspect-ratio events
+    if (currentSrc === assetPath) return;
     image.hidden = isWebm;
     video.hidden = !isWebm;
     if (isWebm) {
@@ -67,6 +70,7 @@
   const hideMenu = () => {
     menu.hidden = true;
     menuOpen = false;
+    void call("restoreSize");
   };
 
   const hideUrlDialog = () => {
@@ -86,10 +90,18 @@
   const showMenu = (event) => {
     event.preventDefault();
     hideUrlDialog();
+    // Temporarily expand window so the menu isn't clipped
+    const menuWidth = 180;
+    const menuHeight = 220;
+    const neededWidth = Math.max(window.innerWidth, event.clientX + menuWidth + 8);
+    const neededHeight = Math.max(window.innerHeight, event.clientY + menuHeight + 8);
+    if (neededWidth > window.innerWidth || neededHeight > window.innerHeight) {
+      void call("expandForMenu", { width: Math.ceil(neededWidth), height: Math.ceil(neededHeight) });
+    }
     const margin = 4;
     menu.hidden = false;
-    menu.style.left = `${Math.max(margin, Math.min(event.clientX, window.innerWidth - menu.offsetWidth - margin))}px`;
-    menu.style.top = `${Math.max(margin, Math.min(event.clientY, window.innerHeight - menu.offsetHeight - margin))}px`;
+    menu.style.left = `${Math.max(margin, Math.min(event.clientX, neededWidth - menuWidth - margin))}px`;
+    menu.style.top = `${Math.max(margin, Math.min(event.clientY, neededHeight - menuHeight - margin))}px`;
     menuOpen = true;
   };
 
@@ -138,6 +150,18 @@
   image.addEventListener("error", () => void call("reportAssetError"));
   video.addEventListener("error", () => void call("reportAssetError"));
 
+  image.addEventListener("load", () => {
+    const nw = image.naturalWidth;
+    const nh = image.naturalHeight;
+    if (nw && nh) void call("reportAspectRatio", { width: nw, height: nh });
+  });
+
+  video.addEventListener("loadedmetadata", () => {
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (vw && vh) void call("reportAspectRatio", { width: vw, height: vh });
+  });
+
   menu.addEventListener("click", async (event) => {
     const button = event.target.closest("button[data-action]");
     if (!button) return;
@@ -149,6 +173,7 @@
     if (action === "import-local") applyState(await call("chooseLocalAsset"));
     if (action === "clear-local") applyState(await call("clearLocalAsset"));
     if (action === "delete") await call("remove");
+    if (action === "close-menu") { /* already hidden by hideMenu() above */ }
   });
 
   urlDialog.addEventListener("submit", async (event) => {
@@ -163,6 +188,8 @@
       urlError.hidden = false;
     }
   });
+
+  document.querySelector('[data-action="cancel-url"]').addEventListener("click", hideUrlDialog);
 
   document.addEventListener("click", (event) => {
     if (menuOpen && !menu.contains(event.target)) hideMenu();

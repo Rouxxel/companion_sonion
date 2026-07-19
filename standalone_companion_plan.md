@@ -48,7 +48,7 @@ Recreate the core companion-sonion functionality as a standalone desktop applica
 - **Delete**: Remove companion
 - **Change Asset URL**: Update image URL
 - **Import Local Asset**: Select local file
-- **Clear Local Asset**: Switch back to URL mode
+- **Clear current Asset**: Switch back to URL mode
 - **Bring to Front**: Adjust z-index
 
 ### 5. Asset Management

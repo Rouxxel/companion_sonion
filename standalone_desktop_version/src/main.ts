@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, Tray } from "electron";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Companion, CompanionManager, CompanionSettings } from "./companion-manager";
@@ -12,8 +12,18 @@ const MAX_LOCAL_ASSET_BYTES = 25 * 1024 * 1024;
 const MAX_REMOTE_ASSET_BYTES = 15 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".webm"]);
 
+// Keep Chromium's HTTP/GPU cache away from Electron's shared default profile.
+// This must run before Electron is ready and prevents cache permission failures on Windows.
+const appDataPath = path.join(app.getPath("appData"), "Sonion Companion");
+const sessionDataPath = path.join(appDataPath, "session-data");
+mkdirSync(sessionDataPath, { recursive: true });
+app.setPath("userData", appDataPath);
+app.setPath("sessionData", sessionDataPath);
+app.commandLine.appendSwitch("disk-cache-dir", path.join(sessionDataPath, "cache"));
+
 let manager: CompanionManager;
 const companionWindows = new Map<string, BrowserWindow>();
+const companionAspectRatios = new Map<string, number>();
 let tray: Tray | undefined;
 let settingsWindow: BrowserWindow | undefined;
 
@@ -88,7 +98,7 @@ async function cacheRemoteAsset(rawUrl: string): Promise<string> {
   const contentLength = Number(response.headers.get("content-length"));
   if (Number.isFinite(contentLength) && contentLength > MAX_REMOTE_ASSET_BYTES) throw new Error("The remote asset is larger than 15 MB.");
   const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
-  if (!contentType.startsWith("image/") && !contentType.startsWith("video/")) throw new Error("The URL did not return an image or video asset.");
+  if (!contentType.startsWith("image/") && !contentType.startsWith("video/")) throw new Error("The URL did not return an image or GID asset.");
   const data = Buffer.from(await response.arrayBuffer());
   if (data.length > MAX_REMOTE_ASSET_BYTES) throw new Error("The remote asset is larger than 15 MB.");
   const extension = contentType.includes("webm") ? ".webm" : contentType.includes("gif") ? ".gif" : contentType.includes("png") ? ".png" : contentType.includes("jpeg") ? ".jpg" : contentType.includes("webp") ? ".webp" : ".bin";
@@ -104,7 +114,8 @@ async function toView(companion: Companion): Promise<CompanionView> {
     if (companion.assetType === "local") assetUrl = pathToFileURL(validateLocalAsset(companion.assetPath)).toString();
     if (companion.assetType === "url") assetUrl = await cacheRemoteAsset(companion.assetPath);
   } catch {
-    assetUrl = bundledAssetUrl();
+    // A cache/download failure must not prevent a valid remote image from displaying.
+    assetUrl = companion.assetType === "url" ? companion.assetPath : bundledAssetUrl();
   }
   return { ...companion, assetUrl, settings: manager.snapshot().settings };
 }
@@ -119,7 +130,20 @@ async function sendState(id: string): Promise<CompanionView | undefined> {
 }
 
 function applyCompanion(companion: Companion, window: BrowserWindow): void {
-  window.setBounds(boundsFor(companion, displayFor(window)));
+  const aspectRatio = companionAspectRatios.get(companion.id);
+  if (aspectRatio && aspectRatio > 0) {
+    const size = companion.size;
+    let w: number, h: number;
+    if (aspectRatio >= 1) { w = size; h = Math.round(size / aspectRatio); }
+    else { h = size; w = Math.round(size * aspectRatio); }
+    const display = displayFor(window);
+    const { x, y, width, height } = display.workArea;
+    const bx = Math.round(x + companion.x * Math.max(0, width - w));
+    const by = Math.round(y + companion.y * Math.max(0, height - h));
+    window.setBounds({ x: bx, y: by, width: w, height: h });
+  } else {
+    window.setBounds(boundsFor(companion, displayFor(window)));
+  }
   window.setAlwaysOnTop(manager.snapshot().settings.alwaysOnTop);
 }
 
@@ -136,13 +160,14 @@ function createCompanionWindow(companion: Companion): BrowserWindow {
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.loadFile(path.join(__dirname, "renderer", "companion-window.html"));
   window.once("ready-to-show", () => { window.showInactive(); void sendState(companion.id); });
-  window.on("focus", () => { if (!companion.locked) { manager.bringToFront(companion.id); void sendState(companion.id); } });
+  window.on("focus", () => { if (!companion.locked) { manager.bringToFront(companion.id); } });
   window.on("closed", () => { companionWindows.delete(companion.id); });
   return window;
 }
 
 function removeCompanion(id: string): void {
   manager.remove(id);
+  companionAspectRatios.delete(id);
   const window = companionWindows.get(id);
   if (window && !window.isDestroyed()) window.destroy();
 }
@@ -178,20 +203,89 @@ function registerIpc(): void {
   ipcMain.handle("companion:get-state", async (event) => { const found = senderCompanion(event); return found ? sendState(found[0]) : undefined; });
   ipcMain.handle("companion:move-by", async (event, delta: PointDelta) => {
     const found = senderCompanion(event); if (!found || !isFiniteNumber(delta?.x) || !isFiniteNumber(delta?.y)) return undefined;
-    const [id, window] = found; const current = manager.get(id); if (!current || current.locked) return sendState(id);
-    const bounds = window.getBounds(); const display = displayFor(window); const moved = { ...bounds, x: Math.round(bounds.x + Math.max(-500, Math.min(500, delta.x))), y: Math.round(bounds.y + Math.max(-500, Math.min(500, delta.y))) };
-    const position = normalizedPosition(moved, current.size, display); const updated = manager.update(id, position); applyCompanion(updated, window); return sendState(id);
+    const [id, window] = found; const current = manager.get(id); if (!current || current.locked) return undefined;
+    const bounds = window.getBounds(); const display = displayFor(window);
+    const moved = { ...bounds, x: Math.round(bounds.x + Math.max(-500, Math.min(500, delta.x))), y: Math.round(bounds.y + Math.max(-500, Math.min(500, delta.y))) };
+    // Normalize using actual window dimensions so aspect-ratio-adjusted windows stay consistent
+    const area = display.workArea;
+    const nx = Math.max(0, Math.min(1, (moved.x - area.x) / Math.max(1, area.width - bounds.width)));
+    const ny = Math.max(0, Math.min(1, (moved.y - area.y) / Math.max(1, area.height - bounds.height)));
+    manager.update(id, { x: nx, y: ny });
+    window.setBounds(moved);
+    return undefined;
   });
   ipcMain.handle("companion:resize", async (event, delta: number) => {
     const found = senderCompanion(event); if (!found || !isFiniteNumber(delta)) return undefined;
     const [id, window] = found; const current = manager.get(id); if (!current || current.locked) return sendState(id);
     const settings = manager.snapshot().settings; const size = Math.round(Math.max(settings.minSize, Math.min(settings.maxSize, current.size + Math.max(-100, Math.min(100, delta)))));
-    const oldBounds = window.getBounds(); const display = displayFor(window); const position = normalizedPosition({ ...oldBounds, x: oldBounds.x - Math.round((size - current.size) / 2), y: oldBounds.y - Math.round((size - current.size) / 2) }, size, display);
-    const updated = manager.update(id, { size, ...position }); applyCompanion(updated, window); return sendState(id);
+    const oldBounds = window.getBounds(); const display = displayFor(window);
+    const aspectRatio = companionAspectRatios.get(id);
+    let w: number, h: number;
+    if (aspectRatio && aspectRatio > 0) {
+      if (aspectRatio >= 1) { w = size; h = Math.round(size / aspectRatio); }
+      else { h = size; w = Math.round(size * aspectRatio); }
+    } else { w = size; h = size; }
+    const cx = oldBounds.x + Math.round(oldBounds.width / 2);
+    const cy = oldBounds.y + Math.round(oldBounds.height / 2);
+    const newBounds = { x: cx - Math.round(w / 2), y: cy - Math.round(h / 2), width: w, height: h };
+    const position = normalizedPosition(newBounds, size, display);
+    manager.update(id, { size, ...position }); window.setBounds(newBounds); window.setAlwaysOnTop(settings.alwaysOnTop); return sendState(id);
   });
   ipcMain.handle("companion:set-hover-opacity", (event, opacity: number) => { const found = senderCompanion(event); return found && isFiniteNumber(opacity) ? undefined : undefined; });
   ipcMain.handle("companion:toggle-lock", async (event) => { const found = senderCompanion(event); if (!found) return undefined; const current = manager.get(found[0]); if (!current) return undefined; manager.update(found[0], { locked: !current.locked }); return sendState(found[0]); });
-  ipcMain.handle("companion:bring-to-front", async (event) => { const found = senderCompanion(event); if (!found) return undefined; companionWindows.get(found[0])?.focus(); manager.bringToFront(found[0]); return sendState(found[0]); });
+  ipcMain.handle("companion:bring-to-front", async (event) => {
+    const found = senderCompanion(event); if (!found) return undefined;
+    const [id, window] = found;
+    window.focus();
+    manager.bringToFront(id);
+    // Return state without repositioning — just update zIndex info
+    const companion = manager.get(id);
+    if (!companion || window.isDestroyed()) return undefined;
+    const view = await toView(companion);
+    window.webContents.send("companion:state", view);
+    return view;
+  });
+  ipcMain.handle("companion:expand-for-menu", (event, size: { width: number; height: number }) => {
+    const found = senderCompanion(event); if (!found) return;
+    const [, window] = found;
+    if (window.isDestroyed()) return;
+    const bounds = window.getBounds();
+    const newWidth = Math.max(bounds.width, Math.min(400, Math.round(size.width)));
+    const newHeight = Math.max(bounds.height, Math.min(400, Math.round(size.height)));
+    if (newWidth > bounds.width || newHeight > bounds.height) {
+      window.setBounds({ ...bounds, width: newWidth, height: newHeight });
+    }
+  });
+  ipcMain.handle("companion:restore-size", (event) => {
+    const found = senderCompanion(event); if (!found) return;
+    const [id, window] = found;
+    if (window.isDestroyed()) return;
+    const companion = manager.get(id);
+    if (companion) applyCompanion(companion, window);
+  });
+  ipcMain.handle("companion:report-aspect-ratio", (event, dimensions: { width: number; height: number }) => {
+    const found = senderCompanion(event); if (!found) return;
+    const [id, window] = found;
+    if (window.isDestroyed()) return;
+    const companion = manager.get(id);
+    if (!companion) return;
+    if (!isFiniteNumber(dimensions?.width) || !isFiniteNumber(dimensions?.height) || dimensions.width <= 0 || dimensions.height <= 0) return;
+    const aspectRatio = dimensions.width / dimensions.height;
+    companionAspectRatios.set(id, aspectRatio);
+    const size = companion.size;
+    let w: number, h: number;
+    if (aspectRatio >= 1) {
+      w = size;
+      h = Math.round(size / aspectRatio);
+    } else {
+      h = size;
+      w = Math.round(size * aspectRatio);
+    }
+    const bounds = window.getBounds();
+    const cx = bounds.x + Math.round(bounds.width / 2);
+    const cy = bounds.y + Math.round(bounds.height / 2);
+    window.setBounds({ x: cx - Math.round(w / 2), y: cy - Math.round(h / 2), width: w, height: h });
+  });
   ipcMain.handle("companion:remove", (event) => { const found = senderCompanion(event); if (found) removeCompanion(found[0]); });
   ipcMain.handle("companion:choose-local-asset", async (event) => {
     const found = senderCompanion(event); if (!found) return undefined; const result = await dialog.showOpenDialog(found[1], { properties: ["openFile"], filters: [{ name: "Companion assets", extensions: [...ALLOWED_EXTENSIONS].map((x) => x.slice(1)) }] });

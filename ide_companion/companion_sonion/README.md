@@ -17,7 +17,7 @@ To generate .vsix locally navigate to companion_sonion folder and run `vsce pack
 - **Delete**: Double-click any companion to instantly remove it
 - **Custom Assets**: Change companion images via URL or import local image files (PNG, JPG, GIF, WebM)
 - **URL/Local Mode Toggle**: Switch between URL and local file modes in the sidebar with automatic disable logic
-- **Clear Local Asset**: Option to clear local file selection and switch back to URL mode
+- **Clear current Asset**: Option to clear local file selection and switch back to URL mode
 - **Relative Positioning**: Companions use percentage-based positioning (0-1) relative to window size for consistent placement across different screen sizes
 - **Split Panel View**: Companion panel opens in split right view for better workspace integration
 - **Explorer Sidebar Integration**: Render companions directly in the Explorer sidebar for a compact, always-visible view
@@ -58,7 +58,7 @@ To generate .vsix locally navigate to companion_sonion folder and run `vsce pack
      - **Delete**: Remove the companion
      - **Change Asset URL**: Update the image URL
      - **Import Local Asset**: Select a local image file to use
-     - **Clear Local Asset (Switch to URL)**: Clear local file selection and switch to URL mode (only shown when local asset is active)
+     - **Clear current Asset (Switch to URL)**: Clear local file selection and switch to URL mode (only shown when local asset is active)
      - **Move to Explorer**: Move companion from Panel to Explorer mode (Panel only)
      - **Move to Panel**: Move companion from Explorer to Panel mode (Explorer only)
 
@@ -131,7 +131,7 @@ This extension contributes the following commands:
 - Local asset import
 - Persistent storage via VS Code globalState
 - URL/Local file mode toggle in sidebar
-- Clear local asset selection option
+- Clear current asset selection option
 - Relative percentage-based positioning for consistent placement
 - Split panel view integration
 - Improved error handling for local assets
