@@ -72,7 +72,7 @@ function normalizedPosition(bounds: Electron.Rectangle, size: number, display: E
 }
 
 function bundledAssetUrl(): string {
-  return pathToFileURL(path.join(__dirname, "assets", "default.svg")).toString();
+  return pathToFileURL(path.join(__dirname, "assets", "sonion.jpeg")).toString();
 }
 
 async function cacheRemoteAsset(rawUrl: string): Promise<string> {
@@ -198,8 +198,8 @@ function registerIpc(): void {
     if (result.canceled || !result.filePaths[0]) return sendState(found[0]); manager.update(found[0], { assetPath: validateLocalAsset(result.filePaths[0]), assetType: "local" }); return sendState(found[0]);
   });
   ipcMain.handle("companion:set-asset-url", async (event, value: string) => { const found = senderCompanion(event); if (!found || typeof value !== "string") return undefined; validateRemoteUrl(value); manager.update(found[0], { assetPath: value.trim(), assetType: "url" }); return sendState(found[0]); });
-  ipcMain.handle("companion:clear-local-asset", async (event) => { const found = senderCompanion(event); if (!found) return undefined; manager.update(found[0], { assetPath: "assets/default.svg", assetType: "bundled" }); return sendState(found[0]); });
-  ipcMain.handle("companion:report-asset-error", async (event) => { const found = senderCompanion(event); if (!found) return undefined; manager.update(found[0], { assetPath: "assets/default.svg", assetType: "bundled" }); return sendState(found[0]); });
+  ipcMain.handle("companion:clear-local-asset", async (event) => { const found = senderCompanion(event); if (!found) return undefined; manager.update(found[0], { assetPath: "assets/sonion.jpeg", assetType: "bundled" }); return sendState(found[0]); });
+  ipcMain.handle("companion:report-asset-error", async (event) => { const found = senderCompanion(event); if (!found) return undefined; manager.update(found[0], { assetPath: "assets/sonion.jpeg", assetType: "bundled" }); return sendState(found[0]); });
   ipcMain.handle("app:get-settings", () => manager.snapshot());
   ipcMain.handle("app:update-settings", (_event, updates: Partial<CompanionSettings>) => { const settings = manager.updateSettings(updates ?? {}); for (const [id, window] of companionWindows) { const companion = manager.get(id); if (companion && !window.isDestroyed()) { applyCompanion(companion, window); void sendState(id); } } return settings; });
   ipcMain.handle("app:add-companion", () => { const companion = manager.create(); createCompanionWindow(companion); return companion.id; });

@@ -46,7 +46,7 @@ export interface CompanionConfig {
 export type CreateCompanionInput = Partial<Omit<Companion, "id" | "zIndex">>;
 export type UpdateCompanionInput = Partial<Omit<Companion, "id">>;
 
-const DEFAULT_ASSET_PATH = "assets/default.svg";
+const DEFAULT_ASSET_PATH = "assets/sonion.jpeg";
 
 export const DEFAULT_SETTINGS: Readonly<CompanionSettings> = Object.freeze({
   alwaysOnTop: false,
