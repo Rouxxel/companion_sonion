@@ -49,7 +49,7 @@ export type UpdateCompanionInput = Partial<Omit<Companion, "id">>;
 const DEFAULT_ASSET_PATH = "assets/sonion.jpeg";
 
 export const DEFAULT_SETTINGS: Readonly<CompanionSettings> = Object.freeze({
-  alwaysOnTop: true, //Change to make it be another window or always in front
+  alwaysOnTop: true, //Change to make it be another window or always in front by default
   defaultSize: 180,
   minSize: 40,
   maxSize: 500,

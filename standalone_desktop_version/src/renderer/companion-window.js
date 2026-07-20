@@ -163,13 +163,21 @@
   image.addEventListener("error", () => void call("reportAssetError"));
   video.addEventListener("error", () => void call("reportAssetError"));
 
+  let lastReportedAsset = "";
+
   image.addEventListener("load", () => {
+    const src = image.src;
+    if (src === lastReportedAsset) return;
+    lastReportedAsset = src;
     const nw = image.naturalWidth;
     const nh = image.naturalHeight;
     if (nw && nh) void call("reportAspectRatio", { width: nw, height: nh });
   });
 
   video.addEventListener("loadedmetadata", () => {
+    const src = video.src;
+    if (src === lastReportedAsset) return;
+    lastReportedAsset = src;
     const vw = video.videoWidth;
     const vh = video.videoHeight;
     if (vw && vh) void call("reportAspectRatio", { width: vw, height: vh });

@@ -293,7 +293,9 @@ function registerIpc(): void {
       h = size;
       w = Math.round(size * aspectRatio);
     }
+    // Only resize if current bounds differ by more than 2px to prevent DPI rounding loops
     const bounds = window.getBounds();
+    if (Math.abs(bounds.width - w) <= 2 && Math.abs(bounds.height - h) <= 2) return;
     const cx = bounds.x + Math.round(bounds.width / 2);
     const cy = bounds.y + Math.round(bounds.height / 2);
     window.setBounds({ x: cx - Math.round(w / 2), y: cy - Math.round(h / 2), width: w, height: h });
