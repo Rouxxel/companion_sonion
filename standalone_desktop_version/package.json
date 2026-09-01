@@ -8,11 +8,44 @@
     "build": "tsc -p tsconfig.json && node scripts/copy-static.mjs",
     "start": "npm run build && electron .",
     "dev": "npm run start",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "package": "npm run build && electron-builder --win",
+    "package:portable": "npm run build && electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.sonion.companion",
+    "productName": "Sonion Companion",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Sonion Companion"
+    }
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "electron": "^43.1.1",
+    "electron-builder": "^25.1.8",
     "typescript": "^5.8.0"
   }
 }

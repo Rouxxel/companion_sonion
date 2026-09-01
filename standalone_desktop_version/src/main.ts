@@ -185,7 +185,7 @@ function showSettings(): void {
 }
 
 function createTray(): void {
-  const icon = nativeImage.createFromPath(path.join(__dirname, "assets", "default.svg")).resize({ width: 16, height: 16 });
+  const icon = nativeImage.createFromPath(path.join(__dirname, "assets", "tray-icon.png")).resize({ width: 16, height: 16 });
   tray = new Tray(icon);
   tray.setToolTip("Sonion Companion");
   tray.setContextMenu(Menu.buildFromTemplate([

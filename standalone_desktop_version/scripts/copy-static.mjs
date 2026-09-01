@@ -5,7 +5,10 @@ const source = join(import.meta.dirname, "..", "src", "renderer");
 const destination = join(import.meta.dirname, "..", "dist", "renderer");
 const assetSource = join(import.meta.dirname, "..", "src", "assets");
 const assetDestination = join(import.meta.dirname, "..", "dist", "assets");
-const defaultAsset = join(import.meta.dirname, "..", "..", "ide_companion", "vscode_version", "media", "sonion.jpeg");
+const buildDir = join(import.meta.dirname, "..", "build");
+const extensionMedia = join(import.meta.dirname, "..", "..", "ide_companion", "vscode_version", "media");
+const defaultAsset = join(extensionMedia, "sonion.jpeg");
+const appIcon = join(extensionMedia, "icon_128_128.png");
 
 await rm(destination, { force: true, recursive: true });
 await mkdir(destination, { recursive: true });
@@ -14,3 +17,6 @@ await rm(assetDestination, { force: true, recursive: true });
 await mkdir(assetDestination, { recursive: true });
 await cp(assetSource, assetDestination, { recursive: true });
 await cp(defaultAsset, join(assetDestination, "sonion.jpeg"));
+await cp(appIcon, join(assetDestination, "tray-icon.png"));
+await mkdir(buildDir, { recursive: true });
+await cp(appIcon, join(buildDir, "icon.png"));
