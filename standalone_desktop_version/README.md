@@ -4,12 +4,36 @@ A minimalist, borderless floating companion player. Each companion is a transpar
 
 ## Run
 
+### Installed app (recommended)
+
+Build a Windows installer once:
+
+```powershell
+cd standalone_desktop_version
+npm install
+npm run package
+```
+
+After it finishes, run the installer from `release/Sonion Companion Setup 0.1.0.exe`. The installer adds a **Start menu** and optional **desktop shortcut**. Pin that shortcut to your taskbar to launch the app like any other program.
+
+When running, Sonion Companion lives in the **system tray** (near the clock). Right-click the tray icon for Add companion, Settings, or Quit.
+
+### Development
+
 ```powershell
 npm install
 npm start
 ```
 
 Use `npm.cmd` instead of `npm` if PowerShell execution policies block the npm shim.
+
+### Portable `.exe` (no installer)
+
+```powershell
+npm run package:portable
+```
+
+This creates `release/Sonion Companion 0.1.0.exe` — a single portable executable you can move anywhere and double-click to run.
 
 ## Features
 
