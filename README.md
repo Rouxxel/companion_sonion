@@ -10,9 +10,9 @@ I just wanted a companion on the screen.
 
 A VS Code extension that brings animated companions into your editor. Spawn, customize, and manage multiple GIF/PNG/WebM companions that persist across sessions.
 
-**Location:** `ide_companion/companion_sonion/`
+**Location:** `ide_companion/vscode_version/`
 
-See the [extension README](ide_companion/companion_sonion/README.md) for full details on features, usage, and installation.
+See the [extension README](ide_companion/vscode_version/README.md) for full details on features, usage, and installation.
 
 ### Standalone Desktop Companion (Electron)
 
@@ -27,7 +27,7 @@ See the [standalone README](standalone_desktop_version/README.md) for setup and 
 ### VS Code Extension
 
 ```bash
-cd ide_companion/companion_sonion
+cd ide_companion/vscode_version
 npm install
 vsce package
 # Install the .vsix via Extensions > Install from VSIX
