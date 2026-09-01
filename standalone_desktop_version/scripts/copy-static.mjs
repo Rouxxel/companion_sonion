@@ -5,7 +5,7 @@ const source = join(import.meta.dirname, "..", "src", "renderer");
 const destination = join(import.meta.dirname, "..", "dist", "renderer");
 const assetSource = join(import.meta.dirname, "..", "src", "assets");
 const assetDestination = join(import.meta.dirname, "..", "dist", "assets");
-const defaultAsset = join(import.meta.dirname, "..", "..", "ide_companion", "companion_sonion", "media", "sonion.jpeg");
+const defaultAsset = join(import.meta.dirname, "..", "..", "ide_companion", "vscode_version", "media", "sonion.jpeg");
 
 await rm(destination, { force: true, recursive: true });
 await mkdir(destination, { recursive: true });

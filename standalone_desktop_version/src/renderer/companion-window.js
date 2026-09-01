@@ -75,6 +75,7 @@
 
   const hideMenu = () => {
     menu.hidden = true;
+    menu.style.visibility = "";
     menuOpen = false;
     void call("restoreSize");
   };
@@ -93,28 +94,37 @@
     urlInput.focus();
   };
 
-  const showMenu = (event) => {
+  const showMenu = async (event) => {
     event.preventDefault();
     hideUrlDialog();
-    // If menu is already open, just reposition it without expanding again
+    const margin = 8;
     if (menuOpen) {
-      const margin = 4;
       menu.style.left = `${Math.max(margin, Math.min(event.clientX, window.innerWidth - menu.offsetWidth - margin))}px`;
       menu.style.top = `${Math.max(margin, Math.min(event.clientY, window.innerHeight - menu.offsetHeight - margin))}px`;
       return;
     }
-    // Temporarily expand window so the menu isn't clipped
-    const menuWidth = 180;
-    const menuHeight = 260;
-    const neededWidth = Math.max(window.innerWidth, event.clientX + menuWidth + 8);
-    const neededHeight = Math.max(window.innerHeight, event.clientY + menuHeight + 8);
-    if (neededWidth > window.innerWidth || neededHeight > window.innerHeight) {
-      void call("expandForMenu", { width: Math.ceil(neededWidth), height: Math.ceil(neededHeight) });
-    }
-    const margin = 4;
+    // Measure the real menu size before expanding the window.
     menu.hidden = false;
-    menu.style.left = `${Math.max(margin, Math.min(event.clientX, neededWidth - menuWidth - margin))}px`;
-    menu.style.top = `${Math.max(margin, Math.min(event.clientY, neededHeight - menuHeight - margin))}px`;
+    menu.style.visibility = "hidden";
+    const menuWidth = menu.offsetWidth;
+    const menuHeight = menu.offsetHeight;
+    let viewWidth = window.innerWidth;
+    let viewHeight = window.innerHeight;
+    const neededWidth = Math.max(viewWidth, event.clientX + menuWidth + margin);
+    const neededHeight = Math.max(viewHeight, event.clientY + menuHeight + margin);
+    if (neededWidth > viewWidth || neededHeight > viewHeight) {
+      const expanded = await call("expandForMenu", { width: Math.ceil(neededWidth), height: Math.ceil(neededHeight) });
+      if (expanded && typeof expanded.width === "number" && typeof expanded.height === "number") {
+        viewWidth = expanded.width;
+        viewHeight = expanded.height;
+      } else {
+        viewWidth = window.innerWidth;
+        viewHeight = window.innerHeight;
+      }
+    }
+    menu.style.left = `${Math.max(margin, Math.min(event.clientX, viewWidth - menuWidth - margin))}px`;
+    menu.style.top = `${Math.max(margin, Math.min(event.clientY, viewHeight - menuHeight - margin))}px`;
+    menu.style.visibility = "";
     menuOpen = true;
   };
 
@@ -147,7 +157,7 @@
   main.addEventListener("pointercancel", endDrag);
 
   main.addEventListener("wheel", (event) => {
-    if (locked || menuOpen || !urlDialog.hidden) return;
+    if (locked || dragging || menuOpen || !urlDialog.hidden) return;
     event.preventDefault();
     void call("resize", event.deltaY < 0 ? 12 : -12);
   }, { passive: false });

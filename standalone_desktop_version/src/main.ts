@@ -62,14 +62,25 @@ function displayFor(window: BrowserWindow) {
   return screen.getDisplayMatching(window.getBounds());
 }
 
-function boundsFor(companion: Companion, display = screen.getPrimaryDisplay()) {
-  const { x, y, width, height } = display.workArea;
+function companionWindowDimensions(companionId: string, companion: Companion): { width: number; height: number } {
+  const aspectRatio = companionAspectRatios.get(companionId);
   const size = companion.size;
+  if (aspectRatio && aspectRatio > 0) {
+    if (aspectRatio >= 1) return { width: size, height: Math.round(size / aspectRatio) };
+    return { width: Math.round(size * aspectRatio), height: size };
+  }
+  return { width: size, height: size };
+}
+
+function boundsFor(companion: Companion, display = screen.getPrimaryDisplay(), companionId?: string) {
+  const { x, y, width, height } = display.workArea;
+  const dimensions = companionId
+    ? companionWindowDimensions(companionId, companion)
+    : { width: companion.size, height: companion.size };
   return {
-    x: Math.round(x + companion.x * Math.max(0, width - size)),
-    y: Math.round(y + companion.y * Math.max(0, height - size)),
-    width: size,
-    height: size
+    x: Math.round(x + companion.x * Math.max(0, width - dimensions.width)),
+    y: Math.round(y + companion.y * Math.max(0, height - dimensions.height)),
+    ...dimensions
   };
 }
 
@@ -130,27 +141,14 @@ async function sendState(id: string): Promise<CompanionView | undefined> {
 }
 
 function applyCompanion(companion: Companion, window: BrowserWindow): void {
-  const aspectRatio = companionAspectRatios.get(companion.id);
-  if (aspectRatio && aspectRatio > 0) {
-    const size = companion.size;
-    let w: number, h: number;
-    if (aspectRatio >= 1) { w = size; h = Math.round(size / aspectRatio); }
-    else { h = size; w = Math.round(size * aspectRatio); }
-    const display = displayFor(window);
-    const { x, y, width, height } = display.workArea;
-    const bx = Math.round(x + companion.x * Math.max(0, width - w));
-    const by = Math.round(y + companion.y * Math.max(0, height - h));
-    window.setBounds({ x: bx, y: by, width: w, height: h });
-  } else {
-    window.setBounds(boundsFor(companion, displayFor(window)));
-  }
+  window.setBounds(boundsFor(companion, displayFor(window), companion.id));
   window.setAlwaysOnTop(manager.snapshot().settings.alwaysOnTop);
 }
 
 function createCompanionWindow(companion: Companion): BrowserWindow {
   const window = new BrowserWindow({
-    ...boundsFor(companion), frame: false, transparent: true, skipTaskbar: true, resizable: false,
-    movable: true, hasShadow: false, show: false,
+    ...boundsFor(companion, screen.getPrimaryDisplay(), companion.id), frame: false, transparent: true, skipTaskbar: true, resizable: false,
+    movable: false, hasShadow: false, show: false,
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true }
   });
   companionWindows.set(companion.id, window);
@@ -205,14 +203,14 @@ function registerIpc(): void {
     const found = senderCompanion(event); if (!found || !isFiniteNumber(delta?.x) || !isFiniteNumber(delta?.y)) return undefined;
     const [id, window] = found; const current = manager.get(id); if (!current || current.locked) return undefined;
     const bounds = window.getBounds(); const display = displayFor(window);
+    const { width, height } = companionWindowDimensions(id, current);
     const newX = Math.round(bounds.x + Math.max(-500, Math.min(500, delta.x)));
     const newY = Math.round(bounds.y + Math.max(-500, Math.min(500, delta.y)));
-    // Only reposition, don't touch width/height to avoid DPI rounding growth
-    window.setPosition(newX, newY);
-    // Normalize using actual window dimensions
+    // Keep canonical dimensions on every move to prevent Windows DPI rounding drift.
+    window.setBounds({ x: newX, y: newY, width, height });
     const area = display.workArea;
-    const nx = Math.max(0, Math.min(1, (newX - area.x) / Math.max(1, area.width - bounds.width)));
-    const ny = Math.max(0, Math.min(1, (newY - area.y) / Math.max(1, area.height - bounds.height)));
+    const nx = Math.max(0, Math.min(1, (newX - area.x) / Math.max(1, area.width - width)));
+    const ny = Math.max(0, Math.min(1, (newY - area.y) / Math.max(1, area.height - height)));
     manager.update(id, { x: nx, y: ny });
     return undefined;
   });
@@ -221,12 +219,7 @@ function registerIpc(): void {
     const [id, window] = found; const current = manager.get(id); if (!current || current.locked) return sendState(id);
     const settings = manager.snapshot().settings; const size = Math.round(Math.max(settings.minSize, Math.min(settings.maxSize, current.size + Math.max(-100, Math.min(100, delta)))));
     const oldBounds = window.getBounds(); const display = displayFor(window);
-    const aspectRatio = companionAspectRatios.get(id);
-    let w: number, h: number;
-    if (aspectRatio && aspectRatio > 0) {
-      if (aspectRatio >= 1) { w = size; h = Math.round(size / aspectRatio); }
-      else { h = size; w = Math.round(size * aspectRatio); }
-    } else { w = size; h = size; }
+    const { width: w, height: h } = companionWindowDimensions(id, current);
     const cx = oldBounds.x + Math.round(oldBounds.width / 2);
     const cy = oldBounds.y + Math.round(oldBounds.height / 2);
     const newBounds = { x: cx - Math.round(w / 2), y: cy - Math.round(h / 2), width: w, height: h };
@@ -258,15 +251,18 @@ function registerIpc(): void {
     return view;
   });
   ipcMain.handle("companion:expand-for-menu", (event, size: { width: number; height: number }) => {
-    const found = senderCompanion(event); if (!found) return;
+    const found = senderCompanion(event); if (!found) return undefined;
     const [, window] = found;
-    if (window.isDestroyed()) return;
+    if (window.isDestroyed()) return undefined;
     const bounds = window.getBounds();
-    const newWidth = Math.max(bounds.width, Math.min(400, Math.round(size.width)));
-    const newHeight = Math.max(bounds.height, Math.min(400, Math.round(size.height)));
+    const display = displayFor(window);
+    const newWidth = Math.max(bounds.width, Math.min(display.workArea.width, Math.round(size.width)));
+    const newHeight = Math.max(bounds.height, Math.min(display.workArea.height, Math.round(size.height)));
     if (newWidth > bounds.width || newHeight > bounds.height) {
       window.setBounds({ ...bounds, width: newWidth, height: newHeight });
     }
+    const updated = window.getBounds();
+    return { width: updated.width, height: updated.height };
   });
   ipcMain.handle("companion:restore-size", (event) => {
     const found = senderCompanion(event); if (!found) return;
@@ -284,15 +280,7 @@ function registerIpc(): void {
     if (!isFiniteNumber(dimensions?.width) || !isFiniteNumber(dimensions?.height) || dimensions.width <= 0 || dimensions.height <= 0) return;
     const aspectRatio = dimensions.width / dimensions.height;
     companionAspectRatios.set(id, aspectRatio);
-    const size = companion.size;
-    let w: number, h: number;
-    if (aspectRatio >= 1) {
-      w = size;
-      h = Math.round(size / aspectRatio);
-    } else {
-      h = size;
-      w = Math.round(size * aspectRatio);
-    }
+    const { width: w, height: h } = companionWindowDimensions(id, companion);
     // Only resize if current bounds differ by more than 2px to prevent DPI rounding loops
     const bounds = window.getBounds();
     if (Math.abs(bounds.width - w) <= 2 && Math.abs(bounds.height - h) <= 2) return;
