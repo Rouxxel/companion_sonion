@@ -2,6 +2,7 @@
   "name": "companion-sonion-desktop",
   "version": "0.1.0",
   "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
   "description": "A minimal, taskbar-free desktop companion player.",
   "main": "dist/main.js",
   "scripts": {

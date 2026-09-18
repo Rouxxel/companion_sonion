@@ -1,21 +1,73 @@
-MIT License
+Polyform Noncommercial License 1.0.0
 
-Copyright (c) 2026 Sebastian Russo
+https://polyformproject.org/licenses/noncommercial/1.0.0/
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## Acceptance
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+In order to get any license under these terms, you must agree to them. If you
+receive any software under these terms from a licensor, that is the licensor
+offering you a license. Your receipt of the software from the licensor is your
+acceptance of the license. If you do not agree to these terms, do not receive
+any software under them.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+## Copyright License
+
+The licensor grants you a copyright license for the software to do everything
+you might do with the software that would otherwise infringe the licensor's
+copyright in it for any permitted purpose. However, you may only distribute the
+software or make changes or new works based on it for noncommercial purposes.
+
+## Notices
+
+You must ensure that anyone who gets a copy of any part of the software from
+you, also gets a copy of these terms or the URL for them above, as well as
+copies of any plain-text lines beginning with Required Notice: that the
+licensor sent with the software. You must also include the project's NOTICE
+file (or equivalent attribution) with any distribution.
+
+## No Other Rights
+
+These terms do not allow you to sublicense or transfer any of your licenses to
+anyone else, or change the license terms.
+
+## Patent License
+
+The licensor grants you a patent license for the software that covers patent
+claims the licensor can license, that you would infringe by using the software
+for any permitted purpose.
+
+## Noncommercial Purposes
+
+Noncommercial purposes include personal use, use for research or education, and
+use by nonprofit organizations. Commercial purposes include use in connection
+with a business, or preparing for a business.
+
+## Excuse
+
+You're excused from any breach of these terms if you stop doing anything
+requiring a license within 30 days of when you first notice the breach, and you
+stop doing anything requiring a license within 30 days of when you're notified
+of the breach by the licensor.
+
+## Patent Defense
+
+If you make any written claim that the software infringes or contributes to
+infringement of any patent, your patent license for the software granted under
+these terms ends immediately.
+
+## Violations
+
+If you violate any of these terms, your copyright and patent licenses for the
+software end immediately.
+
+## No Liability
+
+As far as the law allows, the software comes as is, without any warranty or
+condition, and the licensor will not be liable to you for any damages arising
+out of these terms or the use or nature of the software, under any kind of
+legal claim.
+
+---
+
+Required Notice: Copyright (c) 2026 Sebastian Russo. companion_sonion —
+https://github.com/Rouxxel/companion_sonion

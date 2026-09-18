@@ -1,0 +1,103 @@
+Companion Sonion (companion_sonion)
+Copyright (c) 2026 Sebastian Russo
+
+================================================================================
+Project license and attribution
+================================================================================
+
+This repository is licensed under the Polyform Noncommercial License 1.0.0. See
+the LICENSE file for the full text.
+
+If you use, copy, modify, or redistribute this project's source code or
+binaries built from it (in whole or in part), you must:
+
+  1. Include a copy of LICENSE and this NOTICE file (or equivalent notices).
+  2. Give clear, visible credit to Sebastian Russo and the companion_sonion
+     project, including a link to the source repository when distributed
+     electronically:
+       https://github.com/Rouxxel/companion_sonion
+  3. State any changes you made to the original work.
+  4. Comply with the noncommercial use restriction in LICENSE.
+
+Commercial use (including use in connection with a business, or preparing for
+one) requires separate written permission from the copyright holder.
+
+This NOTICE does not replace or modify LICENSE. Third-party components listed
+below are governed by their own licenses.
+
+================================================================================
+Runtime software (standalone desktop app)
+================================================================================
+
+The packaged Electron desktop application includes third-party runtime
+components. Your distribution of a built .exe or installer must also comply with
+those components' licenses (many permit commercial redistribution of the
+runtime itself; that does not grant commercial rights to companion_sonion
+source code under LICENSE).
+
+Electron
+  License: MIT
+  Repository: https://github.com/electron/electron
+  Notes: Bundles Chromium, Node.js, and other upstream projects. Chromium and
+  other bundled licenses are available from the Electron release artifacts and
+  at https://www.chromium.org/chromium-os-licenses/
+
+================================================================================
+Direct npm dependencies (development and build)
+================================================================================
+
+These packages are used to develop, test, or build this repository. They are
+not necessarily all shipped in every artifact, but they are material
+dependencies of the project. Full license texts are in each package's
+node_modules directory and on the npm registry.
+
+Standalone desktop (`standalone_desktop_version/`)
+
+  Package              SPDX-style license   Repository / project
+  -------------------  -------------------  ---------------------------------
+  electron             MIT                  https://github.com/electron/electron
+  electron-builder     MIT                  https://github.com/electron-userland/electron-builder
+  typescript           Apache-2.0           https://github.com/microsoft/TypeScript
+  @types/node          MIT                  https://github.com/DefinitelyTyped/DefinitelyTyped
+
+VS Code extension (`ide_companion/vscode_version/`)
+
+  Package                   SPDX-style license   Repository / project
+  ------------------------  -------------------  ---------------------------------
+  typescript                Apache-2.0           https://github.com/microsoft/TypeScript
+  eslint                    MIT                  https://github.com/eslint/eslint
+  typescript-eslint         MIT                  https://github.com/typescript-eslint/typescript-eslint
+  @types/vscode             MIT                  https://github.com/DefinitelyTyped/DefinitelyTyped
+  @types/node               MIT                  https://github.com/DefinitelyTyped/DefinitelyTyped
+  @types/mocha              MIT                  https://github.com/DefinitelyTyped/DefinitelyTyped
+  @vscode/test-cli          MIT                  https://github.com/microsoft/vscode-test-cli
+  @vscode/test-electron     MIT                  https://github.com/microsoft/vscode-test-electron
+
+Transitive dependencies (hundreds of packages) are pulled in by the tools above.
+When preparing a release, run license compliance for your specific artifact:
+
+  cd standalone_desktop_version
+  npx license-checker --production --summary
+
+  cd ide_companion/vscode_version
+  npx license-checker --production --summary
+
+================================================================================
+Other third-party materials
+================================================================================
+
+  - Visual Studio Code extension host APIs (Microsoft) — used when running the
+    IDE companion inside VS Code; governed by the VS Code license and extension
+    marketplace terms, not by this NOTICE alone.
+  - Default companion media and icons under `ide_companion/vscode_version/media/`
+    and bundled assets copied at build time — included in this repository;
+    same Polyform Noncommercial License as the project unless otherwise noted
+    in file headers.
+
+================================================================================
+Disclaimer
+================================================================================
+
+This file is provided for attribution and convenience. It is not legal advice.
+For commercial licensing of companion_sonion source code, contact the
+copyright holder.

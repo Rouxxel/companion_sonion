@@ -43,4 +43,10 @@ npm start
 
 ## License
 
-See [LICENSE](LICENSE).
+This project is **source-available** under the [Polyform Noncommercial License 1.0.0](LICENSE).
+
+- **Attribution:** If you use this code in any way, you must credit **Sebastian Russo** and **companion_sonion**, include [LICENSE](LICENSE) and [NOTICE](NOTICE), and link to this repository when you distribute it.
+- **Noncommercial:** Use for personal, educational, research, and nonprofit purposes is allowed. **Commercial use** (business use or preparing for a business) is **not** allowed without separate written permission from the copyright holder.
+- **Third parties:** Dependencies and runtime components (for example Electron) have their own licenses; see [NOTICE](NOTICE).
+
+Apache 2.0 was considered, but it **requires** allowing commercial use, so it cannot enforce a noncommercial-only policy for this repository.
