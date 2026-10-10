@@ -36,6 +36,11 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1"
   },
+  "overrides": {
+    "@vscode/test-cli": {
+      "mocha": "12.0.3"
+    }
+  },
   "contributes": {
     "commands": [
       {
