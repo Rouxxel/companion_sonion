@@ -20,9 +20,13 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider {
     resolveWebviewView(webviewView: vscode.WebviewView) {
         this.webviewView = webviewView;
 
+        const localAssetStorageUri = this.manager.getLocalAssetStorageUri();
         webviewView.webview.options = {
             enableScripts: true,
-            localResourceRoots: [this.extensionUri]
+            localResourceRoots: [
+                this.extensionUri,
+                ...(localAssetStorageUri ? [localAssetStorageUri] : [])
+            ]
         };
 
         webviewView.webview.html = getCompanionHtml('explorer');

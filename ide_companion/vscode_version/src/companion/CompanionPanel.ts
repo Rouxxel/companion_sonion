@@ -25,13 +25,18 @@ export class CompanionPanel {
         extensionUri: vscode.Uri,
         private manager: CompanionManager
     ){
+        const localAssetStorageUri = manager.getLocalAssetStorageUri();
         this.panel = vscode.window.createWebviewPanel(
             'companionPanel',
             'Companion',
             vscode.ViewColumn.Beside,
             {
                 enableScripts: true,
-                retainContextWhenHidden: true
+                retainContextWhenHidden: true,
+                localResourceRoots: [
+                    extensionUri,
+                    ...(localAssetStorageUri ? [localAssetStorageUri] : [])
+                ]
             }
         );
 

@@ -129,6 +129,7 @@ export class CompanionManager {
         const filename = `${Date.now()}${ext}`;
         const targetUri = vscode.Uri.joinPath(this.storageUri, filename);
 
+        await vscode.workspace.fs.createDirectory(this.storageUri);
         await vscode.workspace.fs.copy(source, targetUri, { overwrite: true });
 
         // return marker that indicates local asset stored in global storage
@@ -141,5 +142,9 @@ export class CompanionManager {
         const filename = marker.substring('local:'.length);
         console.log("[getLocalAssetFsPath] Getting local asset fs path");
         return vscode.Uri.joinPath(this.storageUri, filename);
+    }
+
+    getLocalAssetStorageUri(): vscode.Uri | undefined {
+        return this.storageUri;
     }
 }
