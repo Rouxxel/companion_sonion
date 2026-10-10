@@ -150,7 +150,7 @@ export class CompanionPanel {
                         } catch (statError) {
                             console.error(`Local asset not found: ${fsUri.toString()}`, statError);
                             // Fallback to default asset if local file doesn't exist
-                            c.assetPath = 'https://media1.tenor.com/m/Wqi3Xrnz2wwAAAAd/mambo-umamusume.gif';
+                            c.assetPath = 'https://c.tenor.com/Wqi3Xrnz2wwAAAAd/tenor.gif';
                         }
                     } catch (e) {
                         console.error('Failed to convert local asset to webview URI:', e);
@@ -159,7 +159,7 @@ export class CompanionPanel {
                 } else {
                     console.error(`Could not resolve local asset path for: ${c.assetPath}`);
                     // Fallback to default asset
-                    c.assetPath = 'https://media1.tenor.com/m/Wqi3Xrnz2wwAAAAd/mambo-umamusume.gif';
+                    c.assetPath = 'https://c.tenor.com/Wqi3Xrnz2wwAAAAd/tenor.gif';
                 }
             }
         }

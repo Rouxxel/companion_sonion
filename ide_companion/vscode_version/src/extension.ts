@@ -31,7 +31,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('companion.spawn', async (options?: { assetPath?: string; localAssetUri?: string; size?: number; x?: number; y?: number; renderMode?: 'panel' | 'explorer' }) => {
 
-            const defaultAssetPath = "https://media1.tenor.com/m/Wqi3Xrnz2wwAAAAd/mambo-umamusume.gif";
+            const defaultAssetPath = "https://c.tenor.com/Wqi3Xrnz2wwAAAAd/tenor.gif";
             const defaultSize = 180;
             const defaultX = 0.5; // center (50%)
             const defaultY = 0.5; // center (50%)
