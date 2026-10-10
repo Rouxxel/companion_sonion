@@ -2,7 +2,7 @@
   "name": "companion-sonion",
   "displayName": "Companion Sonion",
   "description": "A VS Code extension that brings animated companions into your editor. Spawn, customize, and manage multiple GIF/PNG/WebM companions that persist across sessions.",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "license": "PolyForm-Noncommercial-1.0.0",
   "publisher": "Rouxxel",
   "icon": "media/icon_128_128.png",
