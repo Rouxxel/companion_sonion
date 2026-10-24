@@ -9,7 +9,7 @@ A minimalist, borderless floating companion player. Each companion is a transpar
 Build a Windows installer once:
 
 ```powershell
-cd standalone_desktop_version
+cd standalone_desktop_version/windows
 npm install
 npm run package
 ```
@@ -20,12 +20,7 @@ When running, Sonion Companion lives in the **system tray** (near the clock). Ri
 
 ### Development
 
-```powershell
-npm install
-npm start
-```
-
-Use `npm.cmd` instead of `npm` if PowerShell execution policies block the npm shim.
+See [Development](#development) below.
 
 ### Portable `.exe` (no installer)
 
@@ -128,11 +123,25 @@ PNG, JPEG, GIF, WebP, BMP, SVG, WebM
 
 ## Development
 
+Run everything from `standalone_desktop_version/windows`. Use `npm.cmd` instead of `npm` if PowerShell execution policies block the npm shim.
+
 ```powershell
-npm run build       # Compile TypeScript + copy static assets
-npm run typecheck   # Type-check without emitting
-npm start           # Build and launch
+npm install             # First time (also downloads the Electron binary)
+npm start               # Build and launch
+npm run build           # Compile TypeScript + copy renderer files and resources into dist/
+npm run typecheck       # Type-check without emitting
+npm run package:dir     # Unpacked app in release/win-unpacked/ (fast check, no installer)
+npm run package         # Installer in release/
+npm run package:portable  # Portable .exe in release/
 ```
+
+Everything the build needs lives in this folder:
+
+- `src/` — main process, preload and renderer code
+- `resources/assets/` — default companion image and tray icon (copied into the app)
+- `resources/build/icon.ico` — app/installer icon (16–256 px)
+
+If `npm start` fails with `Cannot read properties of undefined (reading 'getPath')`, the environment variable `ELECTRON_RUN_AS_NODE` is set (some editors set it for their terminals); clear it with `Remove-Item Env:ELECTRON_RUN_AS_NODE` and try again.
 
 ## Known Limitations
 

@@ -11,14 +11,15 @@
     "dev": "npm run start",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "package": "npm run build && electron-builder --win",
-    "package:portable": "npm run build && electron-builder --win portable"
+    "package:portable": "npm run build && electron-builder --win portable",
+    "package:dir": "npm run build && electron-builder --win --dir"
   },
   "build": {
     "appId": "com.sonion.companion",
     "productName": "Sonion Companion",
     "directories": {
       "output": "release",
-      "buildResources": "build"
+      "buildResources": "resources/build"
     },
     "files": [
       "dist/**/*",
@@ -33,7 +34,7 @@
           ]
         }
       ],
-      "icon": "build/icon.png"
+      "icon": "resources/build/icon.ico"
     },
     "nsis": {
       "oneClick": false,

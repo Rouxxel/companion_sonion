@@ -109,7 +109,7 @@ async function cacheRemoteAsset(rawUrl: string): Promise<string> {
   const contentLength = Number(response.headers.get("content-length"));
   if (Number.isFinite(contentLength) && contentLength > MAX_REMOTE_ASSET_BYTES) throw new Error("The remote asset is larger than 15 MB.");
   const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
-  if (!contentType.startsWith("image/") && !contentType.startsWith("video/")) throw new Error("The URL did not return an image or GID asset.");
+  if (!contentType.startsWith("image/") && !contentType.startsWith("video/")) throw new Error("The URL did not return an image or video asset.");
   const data = Buffer.from(await response.arrayBuffer());
   if (data.length > MAX_REMOTE_ASSET_BYTES) throw new Error("The remote asset is larger than 15 MB.");
   const extension = contentType.includes("webm") ? ".webm" : contentType.includes("gif") ? ".gif" : contentType.includes("png") ? ".png" : contentType.includes("jpeg") ? ".jpg" : contentType.includes("webp") ? ".webp" : ".bin";
