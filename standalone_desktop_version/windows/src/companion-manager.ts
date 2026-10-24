@@ -304,7 +304,8 @@ export class CompanionManager {
   private readConfig(): CompanionConfig {
     if (!existsSync(this.configPath)) return normalizeConfig({});
     try {
-      return normalizeConfig(JSON.parse(readFileSync(this.configPath, "utf8")) as unknown);
+      // Strip a UTF-8 byte-order mark: some editors add one when the file is edited by hand.
+      return normalizeConfig(JSON.parse(readFileSync(this.configPath, "utf8").replace(/^\uFEFF/, "")) as unknown);
     } catch {
       // Keep a corrupt file available for recovery and start from safe defaults.
       return normalizeConfig({});

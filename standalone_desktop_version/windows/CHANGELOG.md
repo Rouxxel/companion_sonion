@@ -33,6 +33,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - The hover opacity setting had no effect (companions always faded to 30 % and returned to full opacity instead of their own opacity)
 - Resizing with the mouse wheel lagged one step behind (the window used the previous size)
 - Loading a layout no longer changes shortcuts or Start with Windows
+- A `companions.json` edited by hand and saved with a UTF-8 byte-order mark (e.g. by Notepad) no longer resets all companions and settings to defaults
 
 ## [0.1.0]
 

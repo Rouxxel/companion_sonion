@@ -160,10 +160,14 @@ npm install             # First time (also downloads the Electron binary)
 npm start               # Build and launch
 npm run build           # Compile TypeScript + copy renderer files and resources into dist/
 npm run typecheck       # Type-check without emitting
+npm test                # Unit tests (data storage, layouts, multi-monitor geometry, startup entry)
+npm run test:install    # Installer round trip on this PC (see below)
 npm run package:dir     # Unpacked app in release/win-unpacked/ (fast check, no installer)
 npm run package         # Installer in release/
 npm run package:portable  # Portable .exe in release/
 ```
+
+`npm run test:install` runs `scripts/smoke-install.ps1` against the newest installer in `release/`. It installs the app silently for your user, checks the shortcuts, Installed apps entry, single instance, Start with Windows, an update over the existing install, and a silent uninstall, then prints PASS/FAIL for each check. It backs up and restores your `companions.json` and uninstalls the app at the end. It won't run while the app is already installed (add `-Force` to replace that installation). Pass `-KeepInstalled` to leave the app installed for manual checks. Use Windows Sandbox or a VM if you'd rather not touch your own profile.
 
 Everything the build needs lives in this folder:
 
