@@ -199,7 +199,7 @@ This extension contributes the following commands:
 - The Panel reopens after a window reload; new assets swap in only once loaded
 - New settings under `companion.behavior.*` and commands Toggle Reactions, Set Behavior Profile, Set State Asset, Preview State
 
-See [CHANGELOG.md](CHANGELOG.md) for details.
+See [CHANGELOG.md](https://github.com/Rouxxel/companion_sonion/blob/main/ide_companion/vscode_version/CHANGELOG.md) for details.
 
 ### 0.2.0
 

@@ -7,6 +7,7 @@ out/test/**
 vsc-extension-quickstart.md
 possible_improvements.md
 AGENTS.md
+IMPLEMENTATION_PLAN.md
 **/tsconfig.json
 **/eslint.config.mjs
 **/*.map
