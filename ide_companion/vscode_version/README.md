@@ -180,10 +180,24 @@ This extension contributes the following commands:
 ## Known Issues
 
 - The Panel is not reopened automatically after a window reload; your companions are kept and reappear when you spawn a companion or open the panel again
+- Reactions start once the extension is active, i.e. after a Companion view is shown or a Companion command is run
+- Error reactions depend on your language extension reporting errors for the open file; files without a language server never trigger them
+- Typing detection is a heuristic: an edit at your cursor from another extension (e.g. an auto-closing helper) can count as typing, and typing over a selection spanning several lines doesn't
 - Large images or high refresh rates may impact performance
 - Explorer mode companions are constrained to the sidebar viewport and cannot overlay native Explorer content
 
 ## Release Notes
+
+### 0.3.0
+
+- Reactions: companions type along while you type, get excited when you type fast, react to new errors and fall asleep when you're away
+- Animation states with an optional image/video per state, plus built-in fallback animations
+- Behavior profiles: built-in (`default`, `calm`, `coder-pet`, `none`) or your own, per companion
+- WebM/MP4 companions play; companions update individually so animations no longer restart
+- Safer import: invalid entries are skipped and reported
+- New settings under `companion.behavior.*` and commands Toggle Reactions, Set Behavior Profile, Set State Asset, Preview State
+
+See [CHANGELOG.md](CHANGELOG.md) for details.
 
 ### 0.2.0
 

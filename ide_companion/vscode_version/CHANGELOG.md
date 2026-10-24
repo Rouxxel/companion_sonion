@@ -6,6 +6,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-24
+
+Companions now react to what you do. Existing companions, profiles and exports from 0.2.x keep working unchanged; turn reactions off with `Companion: Toggle Reactions` to get the 0.2.x behavior.
+
 ### Added
 
 - Reactions: companions show `typing` while you type in the active editor, `excited` when you type fast, and `sleeping` after inactivity, and wake on any interaction. Formatter, git, output-panel and undo/redo edits don't count as typing, and reactions never write to your saved companions

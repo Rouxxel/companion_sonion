@@ -2,7 +2,7 @@
   "name": "companion-sonion",
   "displayName": "Companion Sonion",
   "description": "A VS Code extension that brings animated companions into your editor. Spawn, customize, and manage multiple GIF/PNG/WebP/WebM/MP4 companions that persist across sessions.",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "license": "PolyForm-Noncommercial-1.0.0",
   "publisher": "Rouxxel",
   "icon": "media/icon_128_128.png",
@@ -140,7 +140,12 @@
           "default": "default",
           "order": 5,
           "description": "Behavior profile used by companions: a built-in one (default, calm, coder-pet, none) or the name of one of your companion.behavior.profiles.",
-          "examples": ["default", "calm", "coder-pet", "none"]
+          "examples": [
+            "default",
+            "calm",
+            "coder-pet",
+            "none"
+          ]
         },
         "companion.behavior.profiles": {
           "type": "array",
@@ -149,18 +154,34 @@
           "markdownDescription": "Your own behavior profiles. A profile with the same name as a built-in one replaces it. Each rule maps an event to a state, e.g. `{ \"name\": \"chill\", \"rules\": [{ \"on\": \"typing\", \"state\": \"typing\", \"when\": { \"languageId\": [\"python\"] } }, { \"on\": \"inactive\", \"state\": \"sleeping\" }] }`. Invalid profiles are skipped with a warning.",
           "items": {
             "type": "object",
-            "required": ["name", "rules"],
+            "required": [
+              "name",
+              "rules"
+            ],
             "properties": {
-              "name": { "type": "string" },
+              "name": {
+                "type": "string"
+              },
               "rules": {
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "required": ["on", "state"],
+                  "required": [
+                    "on",
+                    "state"
+                  ],
                   "properties": {
                     "on": {
                       "type": "string",
-                      "enum": ["typing", "rapidTyping", "inactive", "activity", "typingStopped", "errorAppeared", "errorsCleared"],
+                      "enum": [
+                        "typing",
+                        "rapidTyping",
+                        "inactive",
+                        "activity",
+                        "typingStopped",
+                        "errorAppeared",
+                        "errorsCleared"
+                      ],
                       "enumDescriptions": [
                         "While you are typing",
                         "While you type fast",
@@ -171,14 +192,31 @@
                         "Short reaction when the active file's errors are fixed"
                       ]
                     },
-                    "state": { "type": "string", "enum": ["idle", "typing", "excited", "reacting", "sleeping"] },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "idle",
+                        "typing",
+                        "excited",
+                        "reacting",
+                        "sleeping"
+                      ]
+                    },
                     "when": {
                       "type": "object",
                       "properties": {
-                        "languageId": { "type": "array", "items": { "type": "string" } }
+                        "languageId": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
                       }
                     },
-                    "durationMs": { "type": "number", "minimum": 1 }
+                    "durationMs": {
+                      "type": "number",
+                      "minimum": 1
+                    }
                   }
                 }
               }
