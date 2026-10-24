@@ -23,6 +23,9 @@ Run everything from `standalone_desktop_version/windows` (PowerShell; use `npm.c
 - The build reads only this folder: `src/`, `resources/assets/` (copied into `dist/assets`), `resources/build/` (electron-builder: `icon.ico`, `installer.nsh`). `.gitignore` entries are root-anchored (`/build/`, …) so `resources/build/` stays tracked
 - Identity constants live in `src/app-identity.ts` (`APP_ID` must equal `build.appId`; `AUTOSTART_NAME` must equal the value name in `installer.nsh`)
 - Start with Windows: written with `app.setLoginItemSettings`, read via `reg.exe` (`src/autostart.ts`); Windows is the source of truth after the first launch
+- Updates (`src/updater.ts`, `electron-updater` pinned exactly): manual only, generic feed = GitHub release tag `desktop-latest` (`build.publish`); a release needs `latest.yml`, the Setup `.exe` and its `.blockmap`. Installed app only (not portable/dev). Don't add background checks without asking
+- Machine-level settings (`MACHINE_SETTINGS` in `companion-manager.ts`: shortcuts, Start with Windows, first-run flag, idle sleep) are never changed by loading a layout or importing a world file; add new per-PC preferences there
+- Code signing: none configured. electron-builder signs when `CSC_LINK`/`CSC_KEY_PASSWORD` (or Azure Trusted Signing options) are provided; never commit certificates or secrets
 - Keep Electron security defaults: `contextIsolation`, `sandbox`, no `nodeIntegration`, CSP in the HTML files, navigation/window-open blocked; validate every IPC input in the main process
 - `companions.json` must stay backward compatible: new fields optional, filled in by `normalize*` in `companion-manager.ts`
 - User-facing changes: update `README.md` and `CHANGELOG.md` `[Unreleased]` in the same change

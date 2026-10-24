@@ -18,6 +18,8 @@
         <label>Maximum size <span class="field"><input id="max-size" type="number" min="16" max="2000" required /> px</span></label>
         <label>Maximum companions <input id="max-companions" type="number" min="1" max="100" required /></label>
         <label>Opacity on hover <span class="range"><input id="hover-opacity" type="range" min="5" max="100" step="5" /><output id="hover-opacity-value" for="hover-opacity"></output></span></label>
+        <label><input id="idle-sleep-enabled" type="checkbox" /> Doze when I'm away</label>
+        <label>Away after <span class="field"><input id="idle-sleep-minutes" type="number" min="1" max="120" required /> minutes without input</span></label>
 
         <h2>Startup</h2>
         <label><input id="start-with-windows" type="checkbox" /> Start with Windows</label>
@@ -42,10 +44,15 @@
       <section aria-labelledby="data-heading">
         <h2 id="data-heading">Data</h2>
         <p class="hint">Companions, layouts and cached assets are stored in <code id="data-path"></code>.</p>
-        <button id="open-data-folder" type="button">Open data folder</button>
+        <div class="buttons">
+          <button id="open-data-folder" type="button">Open data folder</button>
+          <button id="export-world" type="button">Export companions…</button>
+          <button id="import-world" type="button">Import companions…</button>
+        </div>
+        <p class="hint">Export saves your companions, layouts and display settings to a file you can import on another PC (or later). Local images are referenced by their path, so copy them too.</p>
       </section>
       <p id="status" role="status"></p>
-      <p class="hint footer">Version <span id="version"></span></p>
+      <p class="hint footer">Version <span id="version"></span> · <button id="check-updates" type="button" class="link">Check for updates</button></p>
     </main>
     <script src="settings.js"></script>
   </body>

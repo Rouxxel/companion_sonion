@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, test } from "node:test";
-import { CompanionManager, DEFAULT_SETTINGS, DEFAULT_SHORTCUTS } from "../companion-manager";
+import { CompanionManager, DEFAULT_SETTINGS, DEFAULT_SHORTCUTS, MACHINE_SETTINGS, WORLD_FORMAT, WORLD_VERSION } from "../companion-manager";
 
 let dir: string;
 const configPath = () => path.join(dir, "companions.json");
@@ -140,6 +140,69 @@ describe("CompanionManager — changes", () => {
     assert.deepEqual(readdirSync(dir), ["companions.json"]);
     assert.equal(manager.recoveredConfigPath, undefined);
     assert.equal(readConfig().companions.length, 5);
+  });
+});
+
+describe("CompanionManager — idle sleep settings", () => {
+  test("defaults on after 5 minutes; values are normalized", () => {
+    const manager = new CompanionManager(dir);
+    assert.deepEqual(manager.snapshot().settings.idleSleep, { enabled: true, minutes: 5 });
+    assert.deepEqual(manager.updateSettings({ idleSleep: { enabled: false, minutes: 0.2 } }).idleSleep, { enabled: false, minutes: 1 });
+    assert.deepEqual(manager.updateSettings({ idleSleep: { enabled: true, minutes: 999 } }).idleSleep, { enabled: true, minutes: 120 });
+  });
+});
+
+describe("CompanionManager — export / import world", () => {
+  test("export contains companions, layout settings and layouts, but no machine-level settings", () => {
+    writeConfig(V010_CONFIG);
+    const world = new CompanionManager(dir).exportWorld();
+    assert.equal(world.format, WORLD_FORMAT);
+    assert.equal(world.version, WORLD_VERSION);
+    assert.equal(world.companions.length, 2);
+    assert.deepEqual(Object.keys(world.profiles), ["work"]);
+    assert.equal(world.settings.hoverOpacity, 0.5);
+    for (const key of MACHINE_SETTINGS) assert.equal(key in world.settings, false, `${key} is not exported`);
+  });
+
+  test("import into another PC: replaces companions, merges layouts, keeps that PC's preferences", () => {
+    writeConfig(V010_CONFIG);
+    const world = JSON.parse(JSON.stringify(new CompanionManager(dir).exportWorld()));
+
+    const otherDir = mkdtempSync(path.join(tmpdir(), "sonion-other-"));
+    try {
+      const other = new CompanionManager(otherDir);
+      other.create();
+      other.saveProfile("home");
+      other.updateSettings({ startWithWindows: false, autostartInitialized: true, idleSleep: { enabled: false, minutes: 30 } });
+
+      assert.deepEqual(other.importWorld(world), { companions: 2, skipped: 0, profiles: 1 });
+      assert.deepEqual(other.list(), V010_CONFIG.companions);
+      assert.deepEqual(other.listProfiles(), ["home", "work"]);
+      const settings = other.snapshot().settings;
+      assert.equal(settings.hoverOpacity, 0.5, "layout setting imported");
+      assert.equal(settings.alwaysOnTop, false, "layout setting imported");
+      assert.equal(settings.startWithWindows, false, "this PC's Start with Windows kept");
+      assert.equal(settings.autostartInitialized, true);
+      assert.deepEqual(settings.idleSleep, { enabled: false, minutes: 30 });
+      assert.deepEqual(settings.shortcuts, DEFAULT_SHORTCUTS);
+    } finally {
+      rmSync(otherDir, { recursive: true, force: true });
+    }
+  });
+
+  test("invalid companions in a world file are skipped and counted", () => {
+    const manager = new CompanionManager(dir);
+    const result = manager.importWorld({ format: WORLD_FORMAT, version: 1, companions: [V010_CONFIG.companions[0], "bad", V010_CONFIG.companions[0]], settings: {}, profiles: {} });
+    assert.deepEqual(result, { companions: 1, skipped: 2, profiles: 0 });
+  });
+
+  test("other files are rejected without changing anything", () => {
+    const manager = new CompanionManager(dir);
+    const before = manager.create();
+    assert.throws(() => manager.importWorld(V010_CONFIG), /isn't a Sonion Companion world file/);
+    assert.throws(() => manager.importWorld([before]), /isn't a Sonion Companion world file/);
+    assert.throws(() => manager.importWorld({ format: WORLD_FORMAT, version: 99, companions: [] }), /newer version/);
+    assert.deepEqual(manager.list().map((c) => c.id), [before.id]);
   });
 });
 

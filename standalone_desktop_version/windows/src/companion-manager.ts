@@ -44,6 +44,30 @@ export interface CompanionSettings {
   startWithWindows: boolean;
   /** Internal: the installed app already turned "Start with Windows" on once, so a later "off" is never overridden. */
   autostartInitialized: boolean;
+  /** Companions doze while Windows reports no keyboard/mouse input for `minutes`. */
+  idleSleep: IdleSleepSettings;
+}
+
+export interface IdleSleepSettings {
+  enabled: boolean;
+  minutes: number;
+}
+
+/** Preferences that belong to this PC, not to a layout or a world file: loading/importing never changes them. */
+export const MACHINE_SETTINGS = ["shortcuts", "startWithWindows", "autostartInitialized", "idleSleep"] as const;
+
+/** File format written by "Export world" and accepted by "Import world". */
+export const WORLD_FORMAT = "sonion-companion-world";
+export const WORLD_VERSION = 1;
+
+export interface WorldFile {
+  format: typeof WORLD_FORMAT;
+  version: number;
+  exportedAt: string;
+  companions: Companion[];
+  /** Layout-related settings only (see MACHINE_SETTINGS). */
+  settings: Partial<CompanionSettings>;
+  profiles: Record<string, CompanionProfile>;
 }
 
 export interface CompanionProfile {
@@ -79,7 +103,8 @@ export const DEFAULT_SETTINGS: Readonly<CompanionSettings> = Object.freeze({
   maxCompanions: 25,
   shortcuts: DEFAULT_SHORTCUTS,
   startWithWindows: true,
-  autostartInitialized: false
+  autostartInitialized: false,
+  idleSleep: Object.freeze({ enabled: true, minutes: 5 })
 });
 
 function clone<T>(value: T): T {
@@ -124,8 +149,30 @@ function normalizeSettings(value: unknown): CompanionSettings {
     maxCompanions: Math.round(numberInRange(source.maxCompanions, DEFAULT_SETTINGS.maxCompanions, 1, 100)),
     shortcuts: normalizeShortcuts(source.shortcuts),
     startWithWindows: typeof source.startWithWindows === "boolean" ? source.startWithWindows : DEFAULT_SETTINGS.startWithWindows,
-    autostartInitialized: source.autostartInitialized === true
+    autostartInitialized: source.autostartInitialized === true,
+    idleSleep: normalizeIdleSleep(source.idleSleep)
   };
+}
+
+function normalizeIdleSleep(value: unknown): IdleSleepSettings {
+  const source = isRecord(value) ? value : {};
+  return {
+    enabled: typeof source.enabled === "boolean" ? source.enabled : DEFAULT_SETTINGS.idleSleep.enabled,
+    minutes: Math.round(numberInRange(source.minutes, DEFAULT_SETTINGS.idleSleep.minutes, 1, 120))
+  };
+}
+
+/** Keeps this PC's machine-level preferences from `current`, everything else from `incoming`. */
+function withMachineSettings(incoming: CompanionSettings, current: CompanionSettings): CompanionSettings {
+  const merged: CompanionSettings = { ...incoming };
+  for (const key of MACHINE_SETTINGS) (merged as unknown as Record<string, unknown>)[key] = clone(current[key]);
+  return merged;
+}
+
+function layoutSettings(settings: CompanionSettings): Partial<CompanionSettings> {
+  const copy: Partial<CompanionSettings> = clone(settings);
+  for (const key of MACHINE_SETTINGS) delete copy[key];
+  return copy;
 }
 
 function normalizeCompanion(value: unknown, settings: CompanionSettings, fallbackZIndex: number): Companion | undefined {
@@ -275,8 +322,7 @@ export class CompanionManager {
     const profile = this.config.profiles[profileName];
     if (!profile) throw new Error(`Unknown profile: ${profileName}`);
     // Layouts restore companions and display settings, not machine-level preferences.
-    const { shortcuts, startWithWindows, autostartInitialized } = this.config.settings;
-    this.config.settings = { ...clone(profile.settings), shortcuts, startWithWindows, autostartInitialized };
+    this.config.settings = withMachineSettings(clone(profile.settings), this.config.settings);
     this.config.companions = clone(profile.companions);
     this.save();
     return this.snapshot();
@@ -288,6 +334,37 @@ export class CompanionManager {
     delete this.config.profiles[profileName];
     this.save();
     return true;
+  }
+
+  /** Companions, layout settings and layouts as a portable file (machine-level preferences excluded). */
+  public exportWorld(): WorldFile {
+    return {
+      format: WORLD_FORMAT,
+      version: WORLD_VERSION,
+      exportedAt: new Date().toISOString(),
+      companions: clone(this.config.companions),
+      settings: layoutSettings(this.config.settings),
+      profiles: clone(this.config.profiles)
+    };
+  }
+
+  /**
+   * Replaces companions and layout settings with those from a world file and adds its layouts
+   * (same name = replaced). This PC's shortcuts, Start with Windows and idle sleep are kept.
+   */
+  public importWorld(raw: unknown): { companions: number; skipped: number; profiles: number } {
+    if (!isRecord(raw) || raw.format !== WORLD_FORMAT) throw new Error("This isn't a Sonion Companion world file.");
+    if (typeof raw.version === "number" && raw.version > WORLD_VERSION) throw new Error("This world file was made by a newer version of Sonion Companion.");
+    const settings = withMachineSettings(normalizeSettings({ ...layoutSettings(DEFAULT_SETTINGS as CompanionSettings), ...(isRecord(raw.settings) ? raw.settings : {}) }), this.config.settings);
+    const companions = normalizeCompanions(raw.companions, settings);
+    const imported = normalizeConfig({ profiles: raw.profiles }).profiles;
+
+    this.config.settings = settings;
+    this.config.companions = companions;
+    this.config.profiles = { ...this.config.profiles, ...imported };
+    this.save();
+    const offered = Array.isArray(raw.companions) ? raw.companions.length : 0;
+    return { companions: companions.length, skipped: Math.max(0, offered - companions.length), profiles: Object.keys(imported).length };
   }
 
   /** Writes the complete state through a sibling temporary file before replacing the config. */

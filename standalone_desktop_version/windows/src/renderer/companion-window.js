@@ -26,6 +26,8 @@
   const urlError = document.querySelector("#url-error");
   const lockButton = document.querySelector('[data-action="toggle-lock"]');
   const onTopButton = document.querySelector('[data-action="toggle-on-top"]');
+  const opacitySlider = document.querySelector("#companion-opacity");
+  const opacityValue = document.querySelector("#companion-opacity-value");
 
   let locked = false;
   let alwaysOnTop = false;
@@ -53,8 +55,14 @@
       onTopButton.textContent = alwaysOnTop ? "✓ Always on top" : "Always on top";
     }
     if (typeof state.assetUrl === "string" && state.assetUrl) setAsset(state.assetUrl);
-    if (typeof state.opacity === "number") baseOpacity = state.opacity;
+    if (typeof state.opacity === "number") {
+      baseOpacity = state.opacity;
+      opacitySlider.value = String(Math.round(baseOpacity * 100));
+      opacityValue.textContent = `${opacitySlider.value}%`;
+    }
     if (state.settings && typeof state.settings.hoverOpacity === "number") hoverOpacity = state.settings.hoverOpacity;
+    // Idle sleep (Windows reported no input for a while): dimmed, slowly breathing, with "z z"
+    if (typeof state.sleeping === "boolean") main.classList.toggle("sleeping", state.sleeping);
     image.style.opacity = String(hovered && !menuOpen ? hoverOpacity : baseOpacity);
     video.style.opacity = image.style.opacity;
   };
@@ -193,6 +201,15 @@
     const vw = video.videoWidth;
     const vh = video.videoHeight;
     if (vw && vh) void call("reportAspectRatio", { width: vw, height: vh });
+  });
+
+  // Per-companion resting opacity: preview while dragging the slider, save on release
+  opacitySlider.addEventListener("input", () => {
+    opacityValue.textContent = `${opacitySlider.value}%`;
+    image.style.opacity = video.style.opacity = String(Number(opacitySlider.value) / 100);
+  });
+  opacitySlider.addEventListener("change", async () => {
+    applyState(await call("setOpacity", Number(opacitySlider.value) / 100));
   });
 
   menu.addEventListener("click", async (event) => {

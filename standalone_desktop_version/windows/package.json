@@ -55,12 +55,21 @@
     },
     "portable": {
       "artifactName": "SonionCompanion-Portable-${version}.${ext}"
-    }
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/Rouxxel/companion_sonion/releases/download/desktop-latest"
+      }
+    ]
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "electron": "^43.1.1",
     "electron-builder": "^26.5.0",
     "typescript": "^5.8.0"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.10"
   }
 }

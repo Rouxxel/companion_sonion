@@ -51,6 +51,7 @@ $dataDir = Join-Path $env:APPDATA "Sonion Companion"
 $configFile = Join-Path $dataDir "companions.json"
 
 $script:failures = 0
+$script:installedByScript = $false
 function Check([string]$name, [bool]$ok) {
   if ($ok) { Write-Host "PASS $name" -ForegroundColor Green } else { Write-Host "FAIL $name" -ForegroundColor Red; $script:failures++ }
 }
@@ -77,6 +78,7 @@ if (Test-Path $configFile) {
 try {
   Write-Host "`n== Install ($Installer)"
   StopApp
+  $script:installedByScript = $true
   Check "silent install exits with 0" ((RunSilent $Installer) -eq 0)
   Check "installed per-user to $installDir" (Test-Path $exe)
   Check "Start menu shortcut exists" (Test-Path $startMenuLink)
@@ -135,8 +137,21 @@ try {
     Check "user data kept (silent uninstall)" (Test-Path $configFile)
   }
 }
+catch {
+  Write-Host "FAIL script stopped: $($_.Exception.Message)" -ForegroundColor Red
+  $script:failures++
+}
 finally {
-  if (-not $KeepInstalled) { StopApp }
+  if (-not $KeepInstalled) {
+    StopApp
+    # Never leave a half-tested installation behind if the script stopped early.
+    if ($script:installedByScript -and (Test-Path $uninstaller)) {
+      Write-Host "Cleaning up: uninstalling the test installation"
+      $null = RunSilent $uninstaller
+      Remove-ItemProperty $runKey -Name $valueName -ErrorAction SilentlyContinue
+      Remove-ItemProperty $approvedKey -Name $valueName -ErrorAction SilentlyContinue
+    }
+  }
   if ($backup) { Copy-Item $backup $configFile -Force; Remove-Item $backup; Write-Host "`nRestored your companions.json" }
 }
 

@@ -1,15 +1,16 @@
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, shell, Tray } from "electron";
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, powerMonitor, screen, shell, Tray } from "electron";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { APP_ID, isPortable, launchedAtLogin, PRODUCT_NAME } from "./app-identity";
 import { autostartAvailable, initializeAutostart, setStartWithWindows } from "./autostart";
+import { checkForUpdates, updatesAvailable } from "./updater";
 import { Companion, CompanionManager, CompanionSettings, ShortcutSettings } from "./companion-manager";
 import { boundsInWorkArea, companionDimensions, DisplayInfo, normalizedPosition, pickDisplay, saveDisplay, Size } from "./geometry";
 
 type PointDelta = { x: number; y: number };
-type CompanionView = Companion & { assetUrl: string; settings: CompanionSettings };
+type CompanionView = Companion & { assetUrl: string; settings: CompanionSettings; sleeping: boolean };
 
 const MAX_LOCAL_ASSET_BYTES = 25 * 1024 * 1024;
 const MAX_REMOTE_ASSET_BYTES = 15 * 1024 * 1024;
@@ -37,6 +38,8 @@ let tray: Tray | undefined;
 let settingsWindow: BrowserWindow | undefined;
 /** Whether each global shortcut could be registered (false = taken by another app or invalid). */
 let shortcutStatus = { addCompanion: false, openSettings: false };
+let systemSleeping = false;
+let idleTimer: ReturnType<typeof setTimeout> | undefined;
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -151,7 +154,23 @@ async function toView(companion: Companion): Promise<CompanionView> {
     // A cache/download failure must not prevent a valid remote image from displaying.
     assetUrl = companion.assetType === "url" ? companion.assetPath : bundledAssetUrl();
   }
-  return { ...companion, assetUrl, settings: manager.snapshot().settings };
+  return { ...companion, assetUrl, settings: manager.snapshot().settings, sleeping: systemSleeping };
+}
+
+/**
+ * Idle sleep: while Windows reports no keyboard/mouse input for the configured minutes,
+ * companions doze. Polls every 15 s while awake and every second while asleep, so they wake
+ * up right away when you're back.
+ */
+function updateIdleSleep(): void {
+  if (idleTimer) clearTimeout(idleTimer);
+  const { enabled, minutes } = manager.snapshot().settings.idleSleep;
+  const sleeping = enabled && powerMonitor.getSystemIdleTime() >= minutes * 60;
+  if (sleeping !== systemSleeping) {
+    systemSleeping = sleeping;
+    for (const id of companionWindows.keys()) void sendState(id);
+  }
+  idleTimer = setTimeout(updateIdleSleep, systemSleeping ? 1_000 : 15_000);
 }
 
 async function sendState(id: string): Promise<CompanionView | undefined> {
@@ -284,9 +303,52 @@ function refreshTrayMenu(): void {
       label: "Start with Windows", type: "checkbox", checked: startWithWindows, enabled: autostartAvailable(),
       click: (item) => runAction("Could not change Start with Windows", () => updateStartWithWindows(item.checked))
     },
+    { label: "Check for updates…", enabled: updatesAvailable(), click: () => runAction("Could not check for updates", checkForUpdates) },
     { type: "separator" },
     { label: "Quit", click: () => app.quit() }
   ]));
+}
+
+/** Replaces all companion windows after the whole set of companions changed (layout load, world import). */
+function recreateCompanionWindows(): void {
+  for (const window of companionWindows.values()) window.destroy();
+  companionAspectRatios.clear();
+  restoreWindows();
+}
+
+function readJsonFile(filePath: string): unknown {
+  try {
+    return JSON.parse(readFileSync(filePath, "utf8").replace(/^\uFEFF/, ""));
+  } catch {
+    throw new Error("The file isn't valid JSON.");
+  }
+}
+
+async function exportWorld(): Promise<string | undefined> {
+  const date = new Date().toISOString().slice(0, 10);
+  const options = { title: "Export companions", defaultPath: path.join(app.getPath("documents"), `sonion-companions-${date}.json`), filters: [{ name: "Sonion Companion world", extensions: ["json"] }] };
+  const result = settingsWindow && !settingsWindow.isDestroyed() ? await dialog.showSaveDialog(settingsWindow, options) : await dialog.showSaveDialog(options);
+  if (result.canceled || !result.filePath) return undefined;
+  writeFileSync(result.filePath, `${JSON.stringify(manager.exportWorld(), null, 2)}\n`, "utf8");
+  return result.filePath;
+}
+
+async function importWorld(): Promise<{ companions: number; skipped: number; profiles: number } | undefined> {
+  const options = { title: "Import companions", properties: ["openFile" as const], filters: [{ name: "Sonion Companion world", extensions: ["json"] }] };
+  const parent = settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow : undefined;
+  const result = parent ? await dialog.showOpenDialog(parent, options) : await dialog.showOpenDialog(options);
+  if (result.canceled || !result.filePaths[0]) return undefined;
+  const world = readJsonFile(result.filePaths[0]);
+  const confirm = await dialog.showMessageBox({
+    type: "question", title: PRODUCT_NAME, noLink: true, buttons: ["Replace", "Cancel"], defaultId: 1, cancelId: 1,
+    message: "Replace your current companions with the imported ones?",
+    detail: "Layouts from the file are added (layouts with the same name are replaced). Your shortcuts, Start with Windows and idle sleep settings stay as they are. Tip: export first to keep a copy of your current companions."
+  });
+  if (confirm.response !== 0) return undefined;
+  const summary = manager.importWorld(world);
+  recreateCompanionWindows();
+  notifySettingsChanged();
+  return summary;
 }
 
 function createTray(): void {
@@ -325,6 +387,11 @@ function registerIpc(): void {
     const cy = oldBounds.y + Math.round(oldBounds.height / 2);
     const newBounds = { x: cx - Math.round(w / 2), y: cy - Math.round(h / 2), width: w, height: h };
     manager.update(id, { size, ...placementFor(newBounds) }); window.setBounds(newBounds); window.setAlwaysOnTop(settings.alwaysOnTop); return sendState(id);
+  });
+  ipcMain.handle("companion:set-opacity", async (event, opacity: number) => {
+    const found = senderCompanion(event); if (!found || !isFiniteNumber(opacity)) return undefined;
+    manager.update(found[0], { opacity: Math.max(0.05, Math.min(1, opacity)) });
+    return sendState(found[0]);
   });
   ipcMain.handle("companion:toggle-lock", async (event) => { const found = senderCompanion(event); if (!found) return undefined; const current = manager.get(found[0]); if (!current) return undefined; manager.update(found[0], { locked: !current.locked }); return sendState(found[0]); });
   ipcMain.handle("companion:toggle-always-on-top", async (event) => {
@@ -402,6 +469,7 @@ function registerIpc(): void {
     dataPath: app.getPath("userData"),
     portable: isPortable(),
     startWithWindowsAvailable: autostartAvailable(),
+    updatesAvailable: updatesAvailable(),
     shortcuts: shortcutStatus
   }));
   ipcMain.handle("app:open-data-folder", async () => {
@@ -414,6 +482,7 @@ function registerIpc(): void {
     const { startWithWindows, autostartInitialized: _ignored, ...rest } = updates ?? {};
     if (typeof startWithWindows === "boolean" && startWithWindows !== manager.snapshot().settings.startWithWindows) updateStartWithWindows(startWithWindows);
     const settings = manager.updateSettings(rest);
+    updateIdleSleep();
     if (JSON.stringify(before) !== JSON.stringify(settings.shortcuts)) applyShortcuts(settings.shortcuts);
     for (const [id, window] of companionWindows) { const companion = manager.get(id); if (companion && !window.isDestroyed()) { applyCompanion(companion, window); void sendState(id); } }
     return settings;
@@ -421,7 +490,10 @@ function registerIpc(): void {
   ipcMain.handle("app:add-companion", () => { const companion = manager.create(); createCompanionWindow(companion); return companion.id; });
   ipcMain.handle("app:list-profiles", () => manager.listProfiles());
   ipcMain.handle("app:save-profile", (_event, name: string) => { manager.saveProfile(name); return manager.listProfiles(); });
-  ipcMain.handle("app:load-profile", (_event, name: string) => { manager.loadProfile(name); for (const window of companionWindows.values()) window.destroy(); companionAspectRatios.clear(); restoreWindows(); return manager.snapshot(); });
+  ipcMain.handle("app:load-profile", (_event, name: string) => { manager.loadProfile(name); recreateCompanionWindows(); return manager.snapshot(); });
+  ipcMain.handle("app:export-world", () => exportWorld());
+  ipcMain.handle("app:import-world", () => importWorld());
+  ipcMain.handle("app:check-for-updates", () => checkForUpdates());
   ipcMain.handle("app:delete-profile", (_event, name: string) => manager.deleteProfile(name));
 }
 
@@ -453,6 +525,7 @@ if (isPrimaryInstance) {
     screen.on("display-added", reapplyAllCompanions);
     screen.on("display-removed", reapplyAllCompanions);
     screen.on("display-metrics-changed", reapplyAllCompanions);
+    updateIdleSleep();
     // Opened by hand with nothing saved yet: show Settings so the app doesn't look like it did nothing.
     if (firstRun && !launchedAtLogin()) showSettings();
     app.on("activate", () => { if (!companionWindows.size) restoreWindows(); });

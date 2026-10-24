@@ -20,6 +20,10 @@ First release with a Windows installer. Existing `companions.json` files from 0.
 - Proper app icon for the executable, installer, taskbar and tray
 - Multiple monitors: each companion remembers its monitor and returns there after a restart; if that monitor is disconnected it's shown on the main monitor and moves back when the monitor is reconnected
 - Settings window: Start with Windows, opacity on hover, keyboard shortcuts (turn on/off, change, and see whether each one is active), **Open data folder**, and the app version. It refreshes when Start with Windows is changed from the tray
+- Updates: **Check for updates…** in the tray and Settings (installed app). Asks before downloading, verifies the download, then restarts now or installs on quit. No background checks
+- Dozing: companions dim and doze with "z z" after a few minutes without keyboard or mouse input (Settings → Doze when I'm away, default 5 minutes) and wake up when you're back. Animations respect the reduced-motion setting
+- Per-companion opacity slider in the right-click menu
+- Export / import companions (Settings → Data): a `.json` file with companions, display settings and layouts, for backups or moving to another PC. Import keeps the PC's own shortcuts, Start with Windows and dozing settings
 
 ### Changed
 
