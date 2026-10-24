@@ -16,6 +16,7 @@ To generate .vsix locally navigate to the `ide_companion/vscode_version` folder 
 - **Lock/Unlock**: Prevent accidental movement by locking a companion (right-click context menu)
 - **Delete**: Double-click any companion to instantly remove it
 - **Custom Assets**: Change companion images via URL or import local files: images (PNG, JPG, GIF, WebP) or looping, muted videos (WebM, MP4)
+- **State Assets**: Give a companion a different image or video for each animation state (typing, excited, reacting, sleeping); states without their own asset use a built-in animation of the main asset
 - **Smooth Updates**: Moving, resizing or changing one companion only updates that companion, so the other animations keep playing without restarting
 - **URL/Local Mode Toggle**: Switch between URL and local file modes in the sidebar with automatic disable logic
 - **Clear current Asset**: Option to clear local file selection and switch back to URL mode
@@ -59,9 +60,19 @@ To generate .vsix locally navigate to the `ide_companion/vscode_version` folder 
      - **Delete**: Remove the companion
      - **Change Asset URL**: Update the image URL
      - **Import Local Asset**: Select a local image file to use
+     - **Set State Asset…**: Choose a state, then use a URL, import a local file, or clear it (see [Animation States](#animation-states))
      - **Clear current Asset (Switch to URL)**: Clear local file selection and switch to URL mode (only shown when local asset is active)
      - **Move to Explorer**: Move companion from Panel to Explorer mode (Panel only)
      - **Move to Panel**: Move companion from Explorer to Panel mode (Explorer only)
+
+### Animation States
+
+Each companion can be in one of these states: `idle`, `typing`, `excited`, `reacting`, `sleeping`.
+
+- `idle` always shows the companion's main asset.
+- Every other state can have its own asset: right-click → **Set State Asset…**, or run `Companion: Set State Asset`.
+- States without their own asset show the main asset with a built-in animation: a small bob (typing), a bounce (excited), a short shake (reacting), or a dimmed, slowly breathing companion with "z z" (sleeping). Turn these off with the `companion.behavior.cssAnimations` setting; they are also disabled when your OS asks for reduced motion.
+- To see what a state looks like, run `Companion: Preview State`. Previews are temporary and are not saved.
 
 ### Mode Switching
 
@@ -90,8 +101,16 @@ Save and restore companion layouts:
 
 - **Import World**: Run `Companion: Import Companion World`
   - Load companions from a previously exported JSON file
+  - Exports from older versions still load. Invalid entries are skipped and reported ("Imported 4 companions, skipped 1 invalid"); positions and sizes outside the allowed range are clamped
+  - State assets are included in exports; local files are referenced by name, so they only resolve on the machine that imported them (otherwise the default asset is shown)
 
 ## Extension Settings
+
+This extension contributes the following settings:
+
+| Setting | Default | Description |
+| ------- | ------- | ----------- |
+| `companion.behavior.cssAnimations` | `true` | Play built-in animations for states that have no asset of their own |
 
 This extension contributes the following commands:
 
@@ -99,6 +118,8 @@ This extension contributes the following commands:
 - `companion.spawnExplorer`: Spawn a companion in Explorer mode
 - `companion.moveToExplorer`: Move a Panel companion to Explorer mode
 - `companion.moveToPanel`: Move an Explorer companion to Panel mode
+- `companion.setStateAsset`: Set or clear the asset a companion shows in a given animation state
+- `companion.previewState`: Temporarily show a companion in a given animation state
 - `companion.saveProfile`: Save current companions as a named profile
 - `companion.loadProfile`: Load a saved profile
 - `companion.exportWorld`: Export companions to JSON

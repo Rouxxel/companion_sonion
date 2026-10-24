@@ -23,11 +23,18 @@ export function getCompanionHtml(mode: RenderMode): string {
                 height: 100vh;
             }
 
+            /* Wrapper per companion: positioned, receives all pointer events */
             .companion {
                 position: absolute;
-                -webkit-user-drag: none;
                 user-select: none;
                 cursor: grab;
+            }
+
+            .companion > .media {
+                display: block;
+                width: 100%;
+                pointer-events: none;
+                -webkit-user-drag: none;
             }
 
             .companion.hovered {
@@ -40,6 +47,68 @@ export function getCompanionHtml(mode: RenderMode): string {
 
             .companion.locked {
                 cursor: not-allowed;
+            }
+
+            /* Fallback animations for states without their own asset */
+            .companion.css-anim[data-state="typing"] > .media {
+                animation: companion-bob 0.3s ease-in-out infinite alternate;
+            }
+
+            .companion.css-anim[data-state="excited"] > .media {
+                animation: companion-bounce 0.45s ease-in-out infinite;
+            }
+
+            .companion.css-anim[data-state="reacting"] > .media {
+                animation: companion-shake 0.5s ease-in-out 1;
+            }
+
+            .companion.css-anim[data-state="sleeping"] > .media {
+                animation: companion-breathe 3s ease-in-out infinite;
+                filter: grayscale(0.6) brightness(0.8);
+            }
+
+            .companion.css-anim[data-state="sleeping"]::after {
+                content: 'z z';
+                position: absolute;
+                top: -1.2em;
+                right: 0;
+                font: italic bold 14px sans-serif;
+                color: var(--vscode-foreground, #888);
+                animation: companion-float 2.5s ease-in-out infinite;
+                pointer-events: none;
+            }
+
+            @keyframes companion-bob {
+                from { transform: translateY(0); }
+                to { transform: translateY(-2px); }
+            }
+
+            @keyframes companion-bounce {
+                0%, 100% { transform: translateY(0) scale(1); }
+                50% { transform: translateY(-8%) scale(1.05); }
+            }
+
+            @keyframes companion-shake {
+                0%, 100% { transform: translateX(0); }
+                20%, 60% { transform: translateX(-4%) rotate(-3deg); }
+                40%, 80% { transform: translateX(4%) rotate(3deg); }
+            }
+
+            @keyframes companion-breathe {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(0.97); }
+            }
+
+            @keyframes companion-float {
+                0%, 100% { transform: translateY(0); opacity: 0.6; }
+                50% { transform: translateY(-4px); opacity: 1; }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .companion.css-anim > .media,
+                .companion.css-anim::after {
+                    animation: none !important;
+                }
             }
         </style>
 
@@ -56,9 +125,10 @@ export function getCompanionHtml(mode: RenderMode): string {
 
             ${diffCompanions.toString()}
 
-            // Rendered companions in render order, and id -> { data, el, src, kind }
+            // Rendered companions in render order, and id -> { data, el, media, src, kind }
             let companions = [];
             const entries = new Map();
+            let animationsEnabled = true;
             // Render received while dragging; applied on mouseup
             let pendingRender = null;
 
@@ -71,6 +141,10 @@ export function getCompanionHtml(mode: RenderMode): string {
             window.addEventListener('message', event => {
                 const msg = event.data;
                 if (msg.command === 'render') {
+                    if (msg.animations !== undefined && msg.animations !== animationsEnabled) {
+                        animationsEnabled = msg.animations;
+                        entries.forEach(applyVisual);
+                    }
                     if (dragState.entry) {
                         pendingRender = msg.companions;
                     } else {
@@ -85,50 +159,55 @@ export function getCompanionHtml(mode: RenderMode): string {
                 }
             });
 
-            // Asset shown for the current state; falls back to the base asset
-            function visualFor(c) {
-                const v = c.state && c.stateVisuals ? c.stateVisuals[c.state] : null;
-                return v || { src: c.assetPath, kind: c.assetKind || 'image' };
+            // Own asset for the current state, if the companion has one
+            function stateVisual(c) {
+                return c.state && c.stateVisuals ? c.stateVisuals[c.state] || null : null;
             }
 
-            function createElement(kind) {
-                const el = document.createElement(kind === 'video' ? 'video' : 'img');
+            // Asset shown for the current state; falls back to the base asset
+            function visualFor(c) {
+                return stateVisual(c) || { src: c.assetPath, kind: c.assetKind || 'image' };
+            }
+
+            function createMedia(kind) {
+                const media = document.createElement(kind === 'video' ? 'video' : 'img');
                 if (kind === 'video') {
-                    el.autoplay = true;
-                    el.loop = true;
-                    el.muted = true;
-                    el.playsInline = true;
-                    el.setAttribute('playsinline', '');
+                    media.autoplay = true;
+                    media.loop = true;
+                    media.muted = true;
+                    media.playsInline = true;
+                    media.setAttribute('playsinline', '');
                 }
-                el.className = 'companion';
-                el.draggable = false;
-                return el;
+                media.className = 'media';
+                media.draggable = false;
+                return media;
             }
 
             function applyVisual(entry) {
-                const v = visualFor(entry.data);
-                if (entry.state !== entry.data.state) {
-                    entry.state = entry.data.state;
-                    if (entry.data.state) {
-                        entry.el.dataset.state = entry.data.state;
-                    } else {
-                        delete entry.el.dataset.state;
-                    }
+                const c = entry.data;
+                const v = visualFor(c);
+
+                if (c.state && c.state !== 'idle') {
+                    entry.el.dataset.state = c.state;
+                } else {
+                    delete entry.el.dataset.state;
                 }
+                entry.el.classList.toggle('css-anim', animationsEnabled && !stateVisual(c));
+
                 if (v.kind !== entry.kind) {
-                    // img <-> video: replace the node in place, keep classes and state
-                    const el = createElement(v.kind);
-                    el.className = entry.el.className;
-                    if (entry.el.dataset.state) el.dataset.state = entry.el.dataset.state;
-                    el.style.cssText = entry.el.style.cssText;
-                    attachListeners(el, entry.data.id);
-                    entry.el.replaceWith(el);
-                    entry.el = el;
+                    // img <-> video: replace only the media element
+                    const media = createMedia(v.kind);
+                    if (entry.media) {
+                        entry.media.replaceWith(media);
+                    } else {
+                        entry.el.appendChild(media);
+                    }
+                    entry.media = media;
                     entry.kind = v.kind;
                     entry.src = null;
                 }
                 if (v.src !== entry.src) {
-                    entry.el.src = v.src;
+                    entry.media.src = v.src;
                     entry.src = v.src;
                 }
             }
@@ -168,13 +247,12 @@ export function getCompanionHtml(mode: RenderMode): string {
                 });
 
                 diff.added.forEach(c => {
-                    const entry = { data: c, el: null, src: null, kind: null, state: undefined };
-                    const v = visualFor(c);
-                    entry.el = createElement(v.kind);
-                    entry.kind = v.kind;
-                    attachListeners(entry.el, c.id);
+                    const el = document.createElement('div');
+                    el.className = 'companion';
+                    const entry = { data: c, el, media: null, src: null, kind: null };
+                    attachListeners(el, c.id);
                     entries.set(c.id, entry);
-                    world.appendChild(entry.el);
+                    world.appendChild(el);
                     applyVisual(entry);
                     layout(entry);
                 });

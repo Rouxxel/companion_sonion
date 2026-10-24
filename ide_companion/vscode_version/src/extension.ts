@@ -4,6 +4,8 @@ import { CompanionPanel } from './companion/CompanionPanel';
 import { CompanionManager } from './companion/CompanionManager';
 import { CompanionExplorerProvider } from './companion/CompanionExplorerProvider';
 import { DEFAULT_ASSET_URL, DEFAULT_SIZE } from './companion/constants';
+import { pickCompanion, promptPreviewState, promptSetStateAsset } from './companion/companionView';
+import { RuntimeStates } from './companion/RuntimeStates';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -19,8 +21,15 @@ export function activate(context: vscode.ExtensionContext) {
     // STATE LAYER
     const manager = new CompanionManager(context.globalState, context.globalStorageUri);
 
+    // RUNTIME ANIMATION STATE (in memory only)
+    const states = new RuntimeStates();
+    context.subscriptions.push(
+        states,
+        manager.onDidChange(() => states.retain(manager.getAll().map(c => c.id)))
+    );
+
     // EXPLORER SIDEBAR PROVIDER
-    const explorerProvider = new CompanionExplorerProvider(context.extensionUri, manager);
+    const explorerProvider = new CompanionExplorerProvider(context.extensionUri, manager, states);
     context.subscriptions.push(
         explorerProvider,
         vscode.window.registerWebviewViewProvider(
@@ -59,7 +68,7 @@ export function activate(context: vscode.ExtensionContext) {
 
             // Only open panel if spawning in panel mode
             if (renderMode === 'panel') {
-                CompanionPanel.createOrShow(context.extensionUri, manager);
+                CompanionPanel.createOrShow(context.extensionUri, manager, states);
             }
         })
     );
@@ -77,15 +86,9 @@ export function activate(context: vscode.ExtensionContext) {
     // Move a panel companion to explorer
     context.subscriptions.push(
         vscode.commands.registerCommand('companion.moveToExplorer', async () => {
-            const panelCompanions = manager.getAllForMode('panel');
-            if (panelCompanions.length === 0) {
-                vscode.window.showInformationMessage('No panel companions to move');
-                return;
-            }
-            const items = panelCompanions.map(c => ({ label: c.id, description: c.assetPath }));
-            const pick = await vscode.window.showQuickPick(items, { placeHolder: 'Select companion to move to Explorer' });
-            if (!pick) { return; }
-            manager.moveToMode(pick.label, 'explorer');
+            const id = await pickCompanion(manager, 'Select companion to move to Explorer', 'panel');
+            if (!id) { return; }
+            manager.moveToMode(id, 'explorer');
             vscode.window.showInformationMessage('Companion moved to Explorer');
         })
     );
@@ -93,16 +96,28 @@ export function activate(context: vscode.ExtensionContext) {
     // Move an explorer companion to panel
     context.subscriptions.push(
         vscode.commands.registerCommand('companion.moveToPanel', async () => {
-            const explorerCompanions = manager.getAllForMode('explorer');
-            if (explorerCompanions.length === 0) {
-                vscode.window.showInformationMessage('No explorer companions to move');
-                return;
-            }
-            const items = explorerCompanions.map(c => ({ label: c.id, description: c.assetPath }));
-            const pick = await vscode.window.showQuickPick(items, { placeHolder: 'Select companion to move to Panel' });
-            if (!pick) { return; }
-            manager.moveToMode(pick.label, 'panel');
+            const id = await pickCompanion(manager, 'Select companion to move to Panel', 'explorer');
+            if (!id) { return; }
+            manager.moveToMode(id, 'panel');
             vscode.window.showInformationMessage('Companion moved to Panel');
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('companion.setStateAsset', async () => {
+            const id = await pickCompanion(manager, 'Select companion');
+            if (id) {
+                await promptSetStateAsset(manager, id);
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('companion.previewState', async () => {
+            const id = await pickCompanion(manager, 'Select companion');
+            if (id) {
+                await promptPreviewState(states, id);
+            }
         })
     );
 
@@ -124,8 +139,8 @@ export function activate(context: vscode.ExtensionContext) {
             }
             const pick = await vscode.window.showQuickPick(profiles, { placeHolder: 'Select profile to load' });
             if (!pick) { return; }
-            await manager.loadProfile(pick);
-            vscode.window.showInformationMessage(`Loaded profile ${pick}`);
+            const result = await manager.loadProfile(pick);
+            vscode.window.showInformationMessage(`Loaded profile ${pick}${result?.skipped ? ` (skipped ${result.skipped} invalid)` : ''}`);
         })
     );
 
@@ -142,8 +157,12 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('companion.importWorld', async () => {
             const uris = await vscode.window.showOpenDialog({ canSelectMany: false, filters: { JSON: ['json'] } });
             if (!uris || uris.length === 0) { return; }
-            await manager.importWorld(uris[0].fsPath);
-            vscode.window.showInformationMessage('World imported');
+            try {
+                const { companions, skipped } = await manager.importWorld(uris[0].fsPath);
+                vscode.window.showInformationMessage(`Imported ${companions.length} companions${skipped ? `, skipped ${skipped} invalid` : ''}`);
+            } catch (e) {
+                vscode.window.showErrorMessage(`Could not import world: ${e instanceof Error ? e.message : String(e)}`);
+            }
         })
     );
 }

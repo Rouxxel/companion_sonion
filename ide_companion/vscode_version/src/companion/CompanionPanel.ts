@@ -1,28 +1,41 @@
 import * as vscode from 'vscode';
 import { CompanionManager } from './CompanionManager';
 import { getCompanionHtml } from './companionHtml';
-import { AssetResolver, handleWebviewMessage } from './companionView';
+import { AssetResolver, buildRenderMessage, handleWebviewMessage, subscribeRenderer } from './companionView';
+import { RuntimeStates } from './RuntimeStates';
 
 export class CompanionPanel {
     public static currentPanel: CompanionPanel | undefined;
 
     private panel: vscode.WebviewPanel;
     private _isDisposed = false;
-    private _changeSubscription?: vscode.Disposable;
+    private _subscriptions: vscode.Disposable[] = [];
     private assets: AssetResolver;
 
-    public static createOrShow(extensionUri: vscode.Uri, manager: CompanionManager) {
-        const panel = CompanionPanel.currentPanel ?? new CompanionPanel(extensionUri, manager);
+    public static createOrShow(extensionUri: vscode.Uri, manager: CompanionManager, states: RuntimeStates) {
+        const panel = CompanionPanel.currentPanel ?? new CompanionPanel(extensionUri, manager, states);
         panel.show();
         return panel;
     }
 
     private startRenderLoop() {
         // subscribe to manager changes and push updated companion list
-        this._changeSubscription = this.manager.onDidChange(change => {
-            this.assets.onManagerChange(change);
-            this.postRender();
-        });
+        this._subscriptions = subscribeRenderer(
+            this.manager,
+            this.states,
+            'panel',
+            change => {
+                if (change) {
+                    this.assets.onManagerChange(change);
+                }
+                this.postRender();
+            },
+            message => {
+                if (!this._isDisposed) {
+                    this.panel.webview.postMessage(message);
+                }
+            }
+        );
 
         // initial render
         this.postRender();
@@ -31,7 +44,8 @@ export class CompanionPanel {
 
     constructor(
         extensionUri: vscode.Uri,
-        private manager: CompanionManager
+        private manager: CompanionManager,
+        private states: RuntimeStates
     ){
         const localAssetStorageUri = manager.getLocalAssetStorageUri();
         this.panel = vscode.window.createWebviewPanel(
@@ -53,7 +67,7 @@ export class CompanionPanel {
 
         this.panel.onDidDispose(() => {
             this._isDisposed = true;
-            this._changeSubscription?.dispose();
+            this._subscriptions.forEach(d => d.dispose());
             CompanionPanel.currentPanel = undefined;
         });
 
@@ -69,12 +83,12 @@ export class CompanionPanel {
             return;
         }
 
-        const comps = await this.assets.getRenderCompanions('panel');
+        const message = await buildRenderMessage(this.assets, 'panel', this.states);
         if (this._isDisposed) {
             return;
         }
 
-        this.panel.webview.postMessage({ command: 'render', companions: comps });
+        this.panel.webview.postMessage(message);
     }
 
     private getHtml() {

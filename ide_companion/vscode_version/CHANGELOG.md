@@ -8,6 +8,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ### Added
 
+- Animation states (`idle`, `typing`, `excited`, `reacting`, `sleeping`) with an optional asset per state: context menu **Set State Asset…** and command `Companion: Set State Asset`
+- Built-in fallback animations for states without their own asset, controlled by the new `companion.behavior.cssAnimations` setting and disabled under reduced motion
+- `Companion: Preview State` command to try a state temporarily (not saved)
 - WebM and MP4 companions now play (looping, muted); previously they were rendered as images and did not show
 
 ### Changed
@@ -19,6 +22,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ### Fixed
 
+- Importing a world file or loading a profile validates every entry: invalid entries are skipped and counted instead of breaking the view, out-of-range positions and sizes are clamped, and an invalid file shows an error without touching your current companions
 - Explorer view no longer leaks event subscriptions when the view is closed and reopened
 
 ### Removed

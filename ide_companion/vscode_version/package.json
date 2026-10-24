@@ -60,6 +60,14 @@
         "title": "Companion: Move To Panel"
       },
       {
+        "command": "companion.setStateAsset",
+        "title": "Companion: Set State Asset"
+      },
+      {
+        "command": "companion.previewState",
+        "title": "Companion: Preview State"
+      },
+      {
         "command": "companion.saveProfile",
         "title": "Save Companion Profile"
       },
@@ -76,6 +84,16 @@
         "title": "Import Companion World"
       }
     ],
+    "configuration": {
+      "title": "Companion Sonion",
+      "properties": {
+        "companion.behavior.cssAnimations": {
+          "type": "boolean",
+          "default": true,
+          "description": "Play built-in animations (bob, bounce, shake, doze) for states that have no asset of their own. Disabled automatically when the OS requests reduced motion."
+        }
+      }
+    },
     "viewsContainers": {
       "activitybar": [
         {

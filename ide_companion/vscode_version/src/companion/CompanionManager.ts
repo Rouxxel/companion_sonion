@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Companion, CompanionChange } from './Companion';
+import { validateCompanions, ValidationResult } from './validation';
 // Use VS Code workspace fs API to avoid direct node fs dependencies
 
 const STORAGE_KEY = 'companions';
@@ -82,15 +83,16 @@ export class CompanionManager {
         return Object.keys(profiles);
     }
 
-    async loadProfile(name: string) {
-        if (!this.storage) { return; }
+    async loadProfile(name: string): Promise<ValidationResult | undefined> {
+        if (!this.storage) { return undefined; }
         const profiles = this.storage.get<Record<string, Companion[]>>(PROFILES_KEY, {});
         const arr = profiles[name];
-        if (!arr) { return; }
-        this.companions.clear();
-        arr.forEach(c => this.companions.set(c.id, c));
+        if (!arr) { return undefined; }
+        const result = validateCompanions(arr);
+        this.replaceAll(result.companions);
         await this.save();
         console.log("[loadProfile] Loaded profile");
+        return result;
     }
 
     async deleteProfile(name: string) {
@@ -109,15 +111,21 @@ export class CompanionManager {
         await vscode.workspace.fs.writeFile(uri, encoded);
     }
 
-    async importWorld(sourceFsPath: string) {
+    /** Throws (leaving the current companions untouched) if the file is not valid JSON or not an array. */
+    async importWorld(sourceFsPath: string): Promise<ValidationResult> {
         const uri = vscode.Uri.file(sourceFsPath);
         const bytes = await vscode.workspace.fs.readFile(uri);
         const raw = new TextDecoder().decode(bytes);
-        const arr = JSON.parse(raw) as Companion[];
-        this.companions.clear();
-        arr.forEach(c => this.companions.set(c.id, c));
+        const result = validateCompanions(JSON.parse(raw));
+        this.replaceAll(result.companions);
         await this.save();
         console.log("[importWorld] Imported world");
+        return result;
+    }
+
+    private replaceAll(companions: Companion[]) {
+        this.companions.clear();
+        companions.forEach(c => this.companions.set(c.id, c));
     }
 
     // Local asset import (copy into extension storage)

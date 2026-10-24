@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import { CompanionManager } from './CompanionManager';
 import { getCompanionHtml } from './companionHtml';
 import { CompanionPanel } from './CompanionPanel';
-import { AssetResolver, handleWebviewMessage } from './companionView';
+import { AssetResolver, buildRenderMessage, handleWebviewMessage, subscribeRenderer } from './companionView';
+import { RuntimeStates } from './RuntimeStates';
 
 /**
  * Renders companions inside the VS Code Explorer sidebar
@@ -16,7 +17,8 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider, vs
 
     constructor(
         private readonly extensionUri: vscode.Uri,
-        private readonly manager: CompanionManager
+        private readonly manager: CompanionManager,
+        private readonly states: RuntimeStates
     ) {}
 
     resolveWebviewView(webviewView: vscode.WebviewView) {
@@ -37,10 +39,22 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider, vs
 
         this.viewDisposables.push(
             // Subscribe to manager changes and push updated companion list
-            this.manager.onDidChange(change => {
-                this.assets?.onManagerChange(change);
-                this.postRender();
-            }),
+            ...subscribeRenderer(
+                this.manager,
+                this.states,
+                'explorer',
+                change => {
+                    if (change) {
+                        this.assets?.onManagerChange(change);
+                    }
+                    this.postRender();
+                },
+                message => {
+                    if (this.webviewView === webviewView) {
+                        webviewView.webview.postMessage(message);
+                    }
+                }
+            ),
 
             // Re-render when the view becomes visible (e.g., when user opens Explorer sidebar)
             webviewView.onDidChangeVisibility(() => {
@@ -53,7 +67,7 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider, vs
             webviewView.webview.onDidReceiveMessage(msg => handleWebviewMessage(this.manager, msg, 'explorer', target => {
                 // Open the panel if it's not already open
                 if (target === 'panel') {
-                    CompanionPanel.createOrShow(this.extensionUri, this.manager);
+                    CompanionPanel.createOrShow(this.extensionUri, this.manager, this.states);
                 }
             })),
 
@@ -73,10 +87,10 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider, vs
         const assets = this.assets;
         if (!view || !assets) { return; }
 
-        const comps = await assets.getRenderCompanions('explorer');
+        const message = await buildRenderMessage(assets, 'explorer', this.states);
         if (this.webviewView !== view) { return; }
 
-        view.webview.postMessage({ command: 'render', companions: comps });
+        view.webview.postMessage(message);
     }
 
     private disposeView() {
