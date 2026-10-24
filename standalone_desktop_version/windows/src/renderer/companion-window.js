@@ -5,7 +5,6 @@
   /** @typedef {{
    * moveBy?: (delta: { x: number, y: number }) => Promise<void> | void,
    * resize?: (delta: number) => Promise<void> | void,
-   * setHoverOpacity?: (opacity: number) => Promise<void> | void,
    * toggleLock?: () => Promise<CompanionState | void> | CompanionState | void,
    * remove?: () => Promise<void> | void,
    * chooseLocalAsset?: () => Promise<CompanionState | void> | CompanionState | void,
@@ -33,6 +32,10 @@
   let dragging = false;
   let lastPointer = null;
   let menuOpen = false;
+  let hovered = false;
+  /** Companion opacity when not hovered, and the Settings → Hover opacity value. */
+  let baseOpacity = 1;
+  let hoverOpacity = 0.3;
 
   const call = async (name, ...args) => {
     const method = bridge[name];
@@ -50,10 +53,10 @@
       onTopButton.textContent = alwaysOnTop ? "✓ Always on top" : "Always on top";
     }
     if (typeof state.assetUrl === "string" && state.assetUrl) setAsset(state.assetUrl);
-    if (typeof state.opacity === "number") {
-      image.style.opacity = String(state.opacity);
-      video.style.opacity = String(state.opacity);
-    }
+    if (typeof state.opacity === "number") baseOpacity = state.opacity;
+    if (state.settings && typeof state.settings.hoverOpacity === "number") hoverOpacity = state.settings.hoverOpacity;
+    image.style.opacity = String(hovered && !menuOpen ? hoverOpacity : baseOpacity);
+    video.style.opacity = image.style.opacity;
   };
 
   const setAsset = (assetPath) => {
@@ -162,13 +165,12 @@
     void call("resize", event.deltaY < 0 ? 12 : -12);
   }, { passive: false });
 
-  const setHoverOpacity = (opacity) => {
+  const setOpacity = (opacity) => {
     image.style.opacity = String(opacity);
     video.style.opacity = String(opacity);
-    void call("setHoverOpacity", opacity);
   };
-  main.addEventListener("mouseenter", () => { if (!menuOpen) setHoverOpacity(0.3); });
-  main.addEventListener("mouseleave", () => { if (!dragging) setHoverOpacity(1); });
+  main.addEventListener("mouseenter", () => { hovered = true; if (!menuOpen) setOpacity(hoverOpacity); });
+  main.addEventListener("mouseleave", () => { hovered = false; if (!dragging) setOpacity(baseOpacity); });
   main.addEventListener("contextmenu", showMenu);
   image.addEventListener("error", () => void call("reportAssetError"));
   video.addEventListener("error", () => void call("reportAssetError"));

@@ -14,6 +14,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Only one copy runs at a time: launching the app again (Start menu, desktop or pinned taskbar icon) opens the Settings window of the running copy
 - Settings opens automatically the first time the app is launched with no companions
 - Proper app icon for the executable, installer, taskbar and tray
+- Multiple monitors: each companion remembers its monitor and returns there after a restart; if that monitor is disconnected it's shown on the main monitor and moves back when the monitor is reconnected
+- Settings window: Start with Windows, opacity on hover, keyboard shortcuts (turn on/off, change, and see whether each one is active), **Open data folder**, and the app version. It refreshes when Start with Windows is changed from the tray
 
 ### Changed
 
@@ -28,6 +30,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Asset URLs with leading or trailing spaces are accepted
 - Loading a layout no longer reuses stale aspect ratios from the previous companions
 - Error message typo for remote assets that aren't images or videos
+- The hover opacity setting had no effect (companions always faded to 30 % and returned to full opacity instead of their own opacity)
+- Resizing with the mouse wheel lagged one step behind (the window used the previous size)
+- Loading a layout no longer changes shortcuts or Start with Windows
 
 ## [0.1.0]
 

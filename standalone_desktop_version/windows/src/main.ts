@@ -1,11 +1,12 @@
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, Tray } from "electron";
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, shell, Tray } from "electron";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { APP_ID, launchedAtLogin, PRODUCT_NAME } from "./app-identity";
+import { APP_ID, isPortable, launchedAtLogin, PRODUCT_NAME } from "./app-identity";
 import { autostartAvailable, initializeAutostart, setStartWithWindows } from "./autostart";
 import { Companion, CompanionManager, CompanionSettings, ShortcutSettings } from "./companion-manager";
+import { boundsInWorkArea, companionDimensions, DisplayInfo, normalizedPosition, pickDisplay, saveDisplay, Size } from "./geometry";
 
 type PointDelta = { x: number; y: number };
 type CompanionView = Companion & { assetUrl: string; settings: CompanionSettings };
@@ -85,38 +86,33 @@ function validateRemoteUrl(value: string): URL {
   return url;
 }
 
-function displayFor(window: BrowserWindow) {
+function displayFor(window: BrowserWindow): Electron.Display {
   return screen.getDisplayMatching(window.getBounds());
 }
 
-function companionWindowDimensions(companionId: string, companion: Companion): { width: number; height: number } {
-  const aspectRatio = companionAspectRatios.get(companionId);
-  const size = companion.size;
-  if (aspectRatio && aspectRatio > 0) {
-    if (aspectRatio >= 1) return { width: size, height: Math.round(size / aspectRatio) };
-    return { width: Math.round(size * aspectRatio), height: size };
-  }
-  return { width: size, height: size };
+function displayInfo(display: Electron.Display): DisplayInfo {
+  return { id: display.id, bounds: display.bounds, workArea: display.workArea };
 }
 
-function boundsFor(companion: Companion, display = screen.getPrimaryDisplay(), companionId?: string) {
-  const { x, y, width, height } = display.workArea;
-  const dimensions = companionId
-    ? companionWindowDimensions(companionId, companion)
-    : { width: companion.size, height: companion.size };
-  return {
-    x: Math.round(x + companion.x * Math.max(0, width - dimensions.width)),
-    y: Math.round(y + companion.y * Math.max(0, height - dimensions.height)),
-    ...dimensions
-  };
+/** The display a companion belongs on: its saved display if still connected, else `fallback` (see pickDisplay). */
+function displayForCompanion(companion: Companion, fallback: Electron.Display = screen.getPrimaryDisplay()): Electron.Display {
+  const displays = screen.getAllDisplays();
+  const picked = pickDisplay(companion.display, displays.map(displayInfo), displayInfo(fallback));
+  return displays.find((display) => display.id === picked.id) ?? fallback;
 }
 
-function normalizedPosition(bounds: Electron.Rectangle, size: number, display: Electron.Display): Pick<Companion, "x" | "y"> {
-  const area = display.workArea;
-  return {
-    x: Math.max(0, Math.min(1, (bounds.x - area.x) / Math.max(1, area.width - size))),
-    y: Math.max(0, Math.min(1, (bounds.y - area.y) / Math.max(1, area.height - size)))
-  };
+function companionWindowDimensions(companionId: string, companion: Pick<Companion, "size">): Size {
+  return companionDimensions(companion.size, companionAspectRatios.get(companionId));
+}
+
+function boundsFor(companion: Companion, display: Electron.Display): Electron.Rectangle {
+  return boundsInWorkArea(companion, companionWindowDimensions(companion.id, companion), display.workArea);
+}
+
+/** Relative position + display for window bounds, as stored in companions.json. */
+function placementFor(bounds: Electron.Rectangle): Pick<Companion, "x" | "y" | "display"> {
+  const display = screen.getDisplayMatching(bounds);
+  return { ...normalizedPosition(bounds, display.workArea), display: saveDisplay(displayInfo(display)) };
 }
 
 function bundledAssetUrl(): string {
@@ -168,13 +164,25 @@ async function sendState(id: string): Promise<CompanionView | undefined> {
 }
 
 function applyCompanion(companion: Companion, window: BrowserWindow): void {
-  window.setBounds(boundsFor(companion, displayFor(window), companion.id));
+  window.setBounds(boundsFor(companion, displayForCompanion(companion, displayFor(window))));
   window.setAlwaysOnTop(manager.snapshot().settings.alwaysOnTop);
+}
+
+/**
+ * Monitors were added, removed or rearranged: put every companion back on its saved display,
+ * or on its current/primary display while that one is missing. The saved display isn't
+ * overwritten here, so companions move back when the monitor is reconnected.
+ */
+function reapplyAllCompanions(): void {
+  for (const [id, window] of companionWindows) {
+    const companion = manager.get(id);
+    if (companion && !window.isDestroyed()) applyCompanion(companion, window);
+  }
 }
 
 function createCompanionWindow(companion: Companion): BrowserWindow {
   const window = new BrowserWindow({
-    ...boundsFor(companion, screen.getPrimaryDisplay(), companion.id), frame: false, transparent: true, skipTaskbar: true, resizable: false,
+    ...boundsFor(companion, displayForCompanion(companion)), frame: false, transparent: true, skipTaskbar: true, resizable: false,
     movable: false, hasShadow: false, show: false,
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true }
   });
@@ -219,7 +227,7 @@ function showSettings(): void {
     return;
   }
   settingsWindow = new BrowserWindow({
-    width: 430, height: 330, title: PRODUCT_NAME, show: false,
+    width: 480, height: 720, minWidth: 420, minHeight: 480, title: PRODUCT_NAME, show: false,
     // Packaged builds use the icon embedded in the .exe; dev runs would otherwise show Electron's.
     ...(app.isPackaged ? {} : { icon: path.join(__dirname, "..", "resources", "build", "icon.ico") }),
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true }
@@ -256,7 +264,13 @@ function updateStartWithWindows(enabled: boolean): boolean {
   const actual = setStartWithWindows(enabled);
   manager.updateSettings({ startWithWindows: actual });
   refreshTrayMenu();
+  notifySettingsChanged();
   return actual;
+}
+
+/** Lets an open Settings window refresh after a change made elsewhere (tray, shortcuts). */
+function notifySettingsChanged(): void {
+  if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.webContents.send("app:settings-changed");
 }
 
 function refreshTrayMenu(): void {
@@ -288,31 +302,30 @@ function registerIpc(): void {
   ipcMain.handle("companion:move-by", async (event, delta: PointDelta) => {
     const found = senderCompanion(event); if (!found || !isFiniteNumber(delta?.x) || !isFiniteNumber(delta?.y)) return undefined;
     const [id, window] = found; const current = manager.get(id); if (!current || current.locked) return undefined;
-    const bounds = window.getBounds(); const display = displayFor(window);
+    const bounds = window.getBounds();
     const { width, height } = companionWindowDimensions(id, current);
-    const newX = Math.round(bounds.x + Math.max(-500, Math.min(500, delta.x)));
-    const newY = Math.round(bounds.y + Math.max(-500, Math.min(500, delta.y)));
+    const newBounds = {
+      x: Math.round(bounds.x + Math.max(-500, Math.min(500, delta.x))),
+      y: Math.round(bounds.y + Math.max(-500, Math.min(500, delta.y))),
+      width, height
+    };
     // Keep canonical dimensions on every move to prevent Windows DPI rounding drift.
-    window.setBounds({ x: newX, y: newY, width, height });
-    const area = display.workArea;
-    const nx = Math.max(0, Math.min(1, (newX - area.x) / Math.max(1, area.width - width)));
-    const ny = Math.max(0, Math.min(1, (newY - area.y) / Math.max(1, area.height - height)));
-    manager.update(id, { x: nx, y: ny });
+    window.setBounds(newBounds);
+    // Position is stored relative to the display the companion is now on (it may have crossed monitors).
+    manager.update(id, placementFor(newBounds));
     return undefined;
   });
   ipcMain.handle("companion:resize", async (event, delta: number) => {
     const found = senderCompanion(event); if (!found || !isFiniteNumber(delta)) return undefined;
     const [id, window] = found; const current = manager.get(id); if (!current || current.locked) return sendState(id);
     const settings = manager.snapshot().settings; const size = Math.round(Math.max(settings.minSize, Math.min(settings.maxSize, current.size + Math.max(-100, Math.min(100, delta)))));
-    const oldBounds = window.getBounds(); const display = displayFor(window);
-    const { width: w, height: h } = companionWindowDimensions(id, current);
+    const oldBounds = window.getBounds();
+    const { width: w, height: h } = companionWindowDimensions(id, { size });
     const cx = oldBounds.x + Math.round(oldBounds.width / 2);
     const cy = oldBounds.y + Math.round(oldBounds.height / 2);
     const newBounds = { x: cx - Math.round(w / 2), y: cy - Math.round(h / 2), width: w, height: h };
-    const position = normalizedPosition(newBounds, size, display);
-    manager.update(id, { size, ...position }); window.setBounds(newBounds); window.setAlwaysOnTop(settings.alwaysOnTop); return sendState(id);
+    manager.update(id, { size, ...placementFor(newBounds) }); window.setBounds(newBounds); window.setAlwaysOnTop(settings.alwaysOnTop); return sendState(id);
   });
-  ipcMain.handle("companion:set-hover-opacity", (event, opacity: number) => { const found = senderCompanion(event); return found && isFiniteNumber(opacity) ? undefined : undefined; });
   ipcMain.handle("companion:toggle-lock", async (event) => { const found = senderCompanion(event); if (!found) return undefined; const current = manager.get(found[0]); if (!current) return undefined; manager.update(found[0], { locked: !current.locked }); return sendState(found[0]); });
   ipcMain.handle("companion:toggle-always-on-top", async (event) => {
     const found = senderCompanion(event); if (!found) return undefined;
@@ -384,6 +397,17 @@ function registerIpc(): void {
   ipcMain.handle("companion:clear-local-asset", async (event) => { const found = senderCompanion(event); if (!found) return undefined; manager.update(found[0], { assetPath: "assets/sonion.jpeg", assetType: "bundled" }); return sendState(found[0]); });
   ipcMain.handle("companion:report-asset-error", async (event) => { const found = senderCompanion(event); if (!found) return undefined; manager.update(found[0], { assetPath: "assets/sonion.jpeg", assetType: "bundled" }); return sendState(found[0]); });
   ipcMain.handle("app:get-settings", () => manager.snapshot());
+  ipcMain.handle("app:get-info", () => ({
+    version: app.getVersion(),
+    dataPath: app.getPath("userData"),
+    portable: isPortable(),
+    startWithWindowsAvailable: autostartAvailable(),
+    shortcuts: shortcutStatus
+  }));
+  ipcMain.handle("app:open-data-folder", async () => {
+    const failure = await shell.openPath(app.getPath("userData"));
+    if (failure) throw new Error(failure);
+  });
   ipcMain.handle("app:update-settings", (_event, updates: Partial<CompanionSettings>) => {
     const before = manager.snapshot().settings.shortcuts;
     // Login-item state is owned by Windows; the renderer may request a change but never set the internal flag.
@@ -419,6 +443,9 @@ if (isPrimaryInstance) {
     restoreWindows();
     createTray();
     applyShortcuts(manager.snapshot().settings.shortcuts);
+    screen.on("display-added", reapplyAllCompanions);
+    screen.on("display-removed", reapplyAllCompanions);
+    screen.on("display-metrics-changed", reapplyAllCompanions);
     // Opened by hand with nothing saved yet: show Settings so the app doesn't look like it did nothing.
     if (firstRun && !launchedAtLogin()) showSettings();
     app.on("activate", () => { if (!companionWindows.size) restoreWindows(); });

@@ -11,11 +11,26 @@
     <main>
       <h1>Sonion Companion</h1>
       <form id="settings-form">
+        <h2>Companions</h2>
         <label><input id="always-on-top" type="checkbox" /> Keep companions on top</label>
-        <label>Default size <input id="default-size" type="number" min="40" max="500" required /> px</label>
-        <label>Minimum size <input id="min-size" type="number" min="16" max="2000" required /> px</label>
-        <label>Maximum size <input id="max-size" type="number" min="16" max="2000" required /> px</label>
+        <label>Default size <span class="field"><input id="default-size" type="number" min="40" max="500" required /> px</span></label>
+        <label>Minimum size <span class="field"><input id="min-size" type="number" min="16" max="2000" required /> px</span></label>
+        <label>Maximum size <span class="field"><input id="max-size" type="number" min="16" max="2000" required /> px</span></label>
         <label>Maximum companions <input id="max-companions" type="number" min="1" max="100" required /></label>
+        <label>Opacity on hover <span class="range"><input id="hover-opacity" type="range" min="5" max="100" step="5" /><output id="hover-opacity-value" for="hover-opacity"></output></span></label>
+
+        <h2>Startup</h2>
+        <label><input id="start-with-windows" type="checkbox" /> Start with Windows</label>
+        <p id="start-with-windows-note" class="hint" hidden></p>
+
+        <h2>Keyboard shortcuts</h2>
+        <label><input id="shortcuts-enabled" type="checkbox" /> Enable system-wide shortcuts</label>
+        <label>Add companion <input id="shortcut-add" type="text" maxlength="64" spellcheck="false" placeholder="Control+Alt+Shift+A" required /></label>
+        <p id="shortcut-add-status" class="hint" role="status"></p>
+        <label>Open settings <input id="shortcut-settings" type="text" maxlength="64" spellcheck="false" placeholder="Control+Alt+Shift+S" required /></label>
+        <p id="shortcut-settings-status" class="hint" role="status"></p>
+        <p class="hint">Use Electron accelerator names, for example <code>Control+Alt+Shift+A</code>. Combinations already used by another app are skipped.</p>
+
         <button type="submit">Save settings</button>
       </form>
       <section class="actions"><button id="add-companion" type="button">Add companion</button></section>
@@ -24,8 +39,13 @@
         <div class="profiles"><select id="profiles" aria-label="Saved layouts"></select><button id="load-profile" type="button">Load</button><button id="delete-profile" type="button">Delete</button></div>
         <div class="profiles"><input id="profile-name" maxlength="80" placeholder="Layout name" /><button id="save-profile" type="button">Save current layout</button></div>
       </section>
+      <section aria-labelledby="data-heading">
+        <h2 id="data-heading">Data</h2>
+        <p class="hint">Companions, layouts and cached assets are stored in <code id="data-path"></code>.</p>
+        <button id="open-data-folder" type="button">Open data folder</button>
+      </section>
       <p id="status" role="status"></p>
-      <p class="hint">Shortcuts: Ctrl+Alt+Shift+A adds a companion; Ctrl+Alt+Shift+S opens this window.</p>
+      <p class="hint footer">Version <span id="version"></span></p>
     </main>
     <script src="settings.js"></script>
   </body>

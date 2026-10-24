@@ -4,7 +4,7 @@ const invoke = <T>(channel: string, ...args: unknown[]) => ipcRenderer.invoke(ch
 
 contextBridge.exposeInMainWorld("companion", {
   getState: () => invoke("companion:get-state"), moveBy: (delta: { x: number; y: number }) => invoke("companion:move-by", delta), resize: (delta: number) => invoke("companion:resize", delta),
-  setHoverOpacity: (opacity: number) => invoke("companion:set-hover-opacity", opacity), toggleLock: () => invoke("companion:toggle-lock"), toggleAlwaysOnTop: () => invoke("companion:toggle-always-on-top"), remove: () => invoke("companion:remove"),
+  toggleLock: () => invoke("companion:toggle-lock"), toggleAlwaysOnTop: () => invoke("companion:toggle-always-on-top"), remove: () => invoke("companion:remove"),
   chooseLocalAsset: () => invoke("companion:choose-local-asset"), setAssetUrl: (url: string) => invoke("companion:set-asset-url", url), clearLocalAsset: () => invoke("companion:clear-local-asset"),
   bringToFront: () => invoke("companion:bring-to-front"), reportAssetError: () => invoke("companion:report-asset-error"),
   addCompanion: () => invoke("companion:add-companion"),
@@ -15,5 +15,7 @@ contextBridge.exposeInMainWorld("companion", {
 });
 
 contextBridge.exposeInMainWorld("desktopApp", {
-  getSettings: () => invoke("app:get-settings"), updateSettings: (updates: unknown) => invoke("app:update-settings", updates), addCompanion: () => invoke("app:add-companion"), listProfiles: () => invoke("app:list-profiles"), saveProfile: (name: string) => invoke("app:save-profile", name), loadProfile: (name: string) => invoke("app:load-profile", name), deleteProfile: (name: string) => invoke("app:delete-profile", name)
+  getSettings: () => invoke("app:get-settings"), updateSettings: (updates: unknown) => invoke("app:update-settings", updates), addCompanion: () => invoke("app:add-companion"), listProfiles: () => invoke("app:list-profiles"), saveProfile: (name: string) => invoke("app:save-profile", name), loadProfile: (name: string) => invoke("app:load-profile", name), deleteProfile: (name: string) => invoke("app:delete-profile", name),
+  getInfo: () => invoke("app:get-info"), openDataFolder: () => invoke("app:open-data-folder"),
+  onSettingsChanged: (callback: () => void) => { const listener = () => callback(); ipcRenderer.on("app:settings-changed", listener); return () => ipcRenderer.removeListener("app:settings-changed", listener); }
 });

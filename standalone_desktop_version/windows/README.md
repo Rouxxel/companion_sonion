@@ -58,7 +58,8 @@ For running from source, see [Development](#development).
 - **Drag to reposition** — click and hold to move companions freely
 - **Mouse wheel resize** — scroll up to enlarge, scroll down to shrink (40–500px range)
 - **Aspect-ratio aware** — window adapts to image dimensions (portrait, landscape, square)
-- **Hover opacity** — companions fade to 30% on hover so they don't block content
+- **Hover opacity** — companions fade (30 % by default, adjustable in Settings) on hover so they don't block content
+- **Multiple monitors** — companions remember which monitor they're on
 - **Lock/Unlock** — prevent accidental movement
 - **Context menu** — right-click for all actions
 - **Local and remote assets** — import from disk or paste a URL
@@ -103,7 +104,7 @@ For running from source, see [Development](#development).
 | `Ctrl` + `Alt` + `Shift` + `S` | Open settings (works from any app) |
 | `Escape` | Close menu or dialog |
 
-`Delete`, `L`, `Ctrl+O`, `Ctrl+U` and `Escape` only work while a companion has focus. The two `Ctrl+Alt+Shift` shortcuts are system-wide: they work from any app while Sonion Companion runs. Earlier versions used `Ctrl+Shift+A` / `Ctrl+Shift+S`, which took over shortcuts like *Save As* in other programs. If another app already uses one of these combinations, Sonion Companion skips it and the other app keeps it. On keyboard layouts with an AltGr key, `Ctrl+Alt` acts as AltGr, so these combinations may type characters there.
+`Delete`, `L`, `Ctrl+O`, `Ctrl+U` and `Escape` only work while a companion has focus. The two `Ctrl+Alt+Shift` shortcuts are system-wide: they work from any app while Sonion Companion runs. Earlier versions used `Ctrl+Shift+A` / `Ctrl+Shift+S`, which took over shortcuts like *Save As* in other programs. If another app already uses one of these combinations, Sonion Companion skips it and the other app keeps it; Settings shows which shortcuts are active, and lets you change or turn them off. On keyboard layouts with an AltGr key, `Ctrl+Alt` acts as AltGr, so these combinations may type characters there.
 
 ### System Tray
 
@@ -116,23 +117,29 @@ For running from source, see [Development](#development).
 
 Accessible via `Ctrl+Alt+Shift+S`, the tray icon, or by launching the app again from the Start menu or taskbar. Options include:
 
-- **Always on top** — keep companions above other windows
+- **Keep companions on top** — keep companions above other windows
 - **Default size** — size for newly spawned companions
 - **Min/Max size** — resize limits
-- **Max companions** — soft limit on total companions
-- **Profiles** — save, load, and delete named layouts
+- **Max companions** — limit on total companions
+- **Opacity on hover** — how transparent a companion gets while the mouse is over it (5–100 %, default 30 %); applies immediately to all companions
+- **Start with Windows** — same switch as in the tray menu; only available in the installed (or portable) app
+- **Keyboard shortcuts** — turn the system-wide shortcuts on or off and change them. Each shortcut shows *Active* or *Not available* (another app uses it, or the combination isn't valid). Use Electron accelerator names such as `Control+Alt+Shift+A`
+- **Layouts** — save, load, and delete named layouts. Loading a layout restores companions and their display settings; it doesn't change your shortcuts or Start with Windows
+- **Open data folder** — opens the folder below in Explorer; the app version is shown at the bottom
+
+The Settings window updates itself when you change Start with Windows from the tray while it's open.
 
 ## Data Storage
 
-All data is stored in Electron's user-data directory:
+All data is stored in `%APPDATA%\Sonion Companion\` (use **Open data folder** in Settings):
 
-- **Windows:** `%APPDATA%/Sonion Companion/`
-- **macOS:** `~/Library/Application Support/Sonion Companion/`
-- **Linux:** `~/.config/Sonion Companion/`
-
-Files:
-- `companions.json` — current state and settings
+- `companions.json` — companions, settings and layouts
 - `asset-cache/` — cached remote assets
+- `session-data/` — browser cache used by the app's windows
+
+### Multiple monitors
+
+Each companion remembers which monitor it's on and returns there after a restart. If that monitor isn't connected, the companion appears on the main monitor (or the monitor it's currently on) and moves back once you reconnect it. Positions saved by earlier versions are placed on the main monitor until you move the companion once.
 
 ## Supported Formats
 

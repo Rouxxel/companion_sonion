@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { SavedDisplay } from "./geometry";
 
 export const CONFIG_VERSION = 1;
 
@@ -18,6 +19,8 @@ export interface Companion {
   locked: boolean;
   opacity: number;
   zIndex: number;
+  /** Display the position is relative to; missing in older data → primary display. */
+  display?: SavedDisplay;
 }
 
 export interface ShortcutSettings {
@@ -130,7 +133,7 @@ function normalizeCompanion(value: unknown, settings: CompanionSettings, fallbac
   const assetType: AssetType = value.assetType === "url" || value.assetType === "local" || value.assetType === "bundled"
     ? value.assetType
     : "bundled";
-  return {
+  const companion: Companion = {
     id: stringOr(value.id, randomUUID()),
     x: numberInRange(value.x, 0.5, 0, 1),
     y: numberInRange(value.y, 0.5, 0, 1),
@@ -141,6 +144,18 @@ function normalizeCompanion(value: unknown, settings: CompanionSettings, fallbac
     opacity: numberInRange(value.opacity, 1, 0.05, 1),
     zIndex: Math.round(numberInRange(value.zIndex, fallbackZIndex, 0, Number.MAX_SAFE_INTEGER))
   };
+  const display = normalizeDisplay(value.display);
+  if (display) companion.display = display;
+  return companion;
+}
+
+function normalizeDisplay(value: unknown): SavedDisplay | undefined {
+  if (!isRecord(value)) return undefined;
+  const { id, x, y, width, height } = value;
+  const finite = [id, x, y, width, height].every((n) => typeof n === "number" && Number.isFinite(n));
+  return finite && (width as number) > 0 && (height as number) > 0
+    ? { id: id as number, x: x as number, y: y as number, width: width as number, height: height as number }
+    : undefined;
 }
 
 function normalizeCompanions(value: unknown, settings: CompanionSettings): Companion[] {
