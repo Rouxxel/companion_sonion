@@ -5,6 +5,7 @@ import { AssetResolver, buildRenderMessage, handleWebviewMessage, subscribeRende
 import { RuntimeStates } from './RuntimeStates';
 
 export class CompanionPanel {
+    public static readonly viewType = 'companionPanel';
     public static currentPanel: CompanionPanel | undefined;
 
     private panel: vscode.WebviewPanel;
@@ -16,6 +17,23 @@ export class CompanionPanel {
         const panel = CompanionPanel.currentPanel ?? new CompanionPanel(extensionUri, manager, states);
         panel.show();
         return panel;
+    }
+
+    /** Re-attaches to a panel VS Code restored after a window reload (see WebviewPanelSerializer). */
+    public static revive(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, manager: CompanionManager, states: RuntimeStates) {
+        CompanionPanel.currentPanel?.dispose();
+        return new CompanionPanel(extensionUri, manager, states, panel);
+    }
+
+    private static webviewOptions(extensionUri: vscode.Uri, manager: CompanionManager): vscode.WebviewOptions {
+        const localAssetStorageUri = manager.getLocalAssetStorageUri();
+        return {
+            enableScripts: true,
+            localResourceRoots: [
+                extensionUri,
+                ...(localAssetStorageUri ? [localAssetStorageUri] : [])
+            ]
+        };
     }
 
     private startRenderLoop() {
@@ -45,22 +63,21 @@ export class CompanionPanel {
     constructor(
         extensionUri: vscode.Uri,
         private manager: CompanionManager,
-        private states: RuntimeStates
+        private states: RuntimeStates,
+        existingPanel?: vscode.WebviewPanel
     ){
-        const localAssetStorageUri = manager.getLocalAssetStorageUri();
-        this.panel = vscode.window.createWebviewPanel(
-            'companionPanel',
-            'Companion',
-            vscode.ViewColumn.Beside,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-                localResourceRoots: [
-                    extensionUri,
-                    ...(localAssetStorageUri ? [localAssetStorageUri] : [])
-                ]
-            }
-        );
+        const options = CompanionPanel.webviewOptions(extensionUri, manager);
+        if (existingPanel) {
+            existingPanel.webview.options = options;
+            this.panel = existingPanel;
+        } else {
+            this.panel = vscode.window.createWebviewPanel(
+                CompanionPanel.viewType,
+                'Companion',
+                vscode.ViewColumn.Beside,
+                { ...options, retainContextWhenHidden: true }
+            );
+        }
 
         this.assets = new AssetResolver(manager, this.panel.webview);
         CompanionPanel.currentPanel = this;

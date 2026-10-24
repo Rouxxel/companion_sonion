@@ -21,11 +21,13 @@ Companions now react to what you do. Existing companions, profiles and exports f
 - Built-in fallback animations for states without their own asset, controlled by the new `companion.behavior.cssAnimations` setting and disabled under reduced motion
 - `Companion: Preview State` command to try a state temporarily (not saved)
 - WebM and MP4 companions now play (looping, muted); previously they were rendered as images and did not show
+- The companion Panel is reopened automatically after a window reload if it was open (it previously stayed closed until you spawned a companion)
 
 ### Changed
 
 - Companions are updated individually instead of redrawing the whole view, so moving, resizing or changing one companion no longer restarts the other companions' animations
 - Right-click no longer starts a drag; resizing past the size limit no longer triggers a save
+- Switching to an asset that isn't loaded yet keeps the current one on screen until the new one is ready, instead of flashing blank; a state asset that fails to load is skipped
 - Panel and Explorer companions now share one implementation for the context menu, asset loading and webview messages, so both modes behave identically
 - File pickers (sidebar and "Import Local Asset") accept the same formats: PNG, JPG, JPEG, GIF, WebP, WebM, MP4
 

@@ -31,6 +31,15 @@ export function activate(context: vscode.ExtensionContext) {
         manager.onDidChange(() => states.retain(manager.getAll().map(c => c.id)))
     );
 
+    // Reopen the Panel after a window reload if it was open before
+    context.subscriptions.push(
+        vscode.window.registerWebviewPanelSerializer(CompanionPanel.viewType, {
+            async deserializeWebviewPanel(panel: vscode.WebviewPanel) {
+                CompanionPanel.revive(panel, context.extensionUri, manager, states);
+            }
+        })
+    );
+
     // BEHAVIOR ENGINE (reactions to typing / inactivity)
     startBehavior(context, manager, states);
 

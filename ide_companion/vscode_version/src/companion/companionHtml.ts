@@ -125,7 +125,7 @@ export function getCompanionHtml(mode: RenderMode): string {
 
             ${diffCompanions.toString()}
 
-            // Rendered companions in render order, and id -> { data, el, media, src, kind }
+            // Rendered companions in render order, and id -> { data, el, media, src, kind, pending }
             let companions = [];
             const entries = new Map();
             let animationsEnabled = true;
@@ -201,24 +201,52 @@ export function getCompanionHtml(mode: RenderMode): string {
                 } else {
                     delete entry.el.dataset.state;
                 }
-                entry.el.classList.toggle('css-anim', animationsEnabled && !stateVisual(c));
+                const isStateAsset = !!stateVisual(c);
+                entry.el.classList.toggle('css-anim', animationsEnabled && !isStateAsset);
 
-                if (v.kind !== entry.kind) {
-                    // img <-> video: replace only the media element
+                if (v.src === entry.src && v.kind === entry.kind) {
+                    // Back to what is already shown: drop any pending swap
+                    entry.pending = null;
+                    return;
+                }
+
+                if (!entry.media) {
+                    // First visual of a new companion: show it right away
                     const media = createMedia(v.kind);
-                    if (entry.media) {
-                        entry.media.replaceWith(media);
-                    } else {
-                        entry.el.appendChild(media);
-                    }
+                    media.src = v.src;
+                    entry.el.appendChild(media);
                     entry.media = media;
-                    entry.kind = v.kind;
-                    entry.src = null;
-                }
-                if (v.src !== entry.src) {
-                    entry.media.src = v.src;
                     entry.src = v.src;
+                    entry.kind = v.kind;
+                    return;
                 }
+
+                const key = v.kind + '|' + v.src;
+                if (entry.pending === key) return;
+
+                // Load the new asset off-screen and swap once it is ready,
+                // so the current visual stays on screen instead of flashing blank
+                entry.pending = key;
+                const next = createMedia(v.kind);
+                const swap = () => {
+                    if (entry.pending !== key) return; // superseded by a newer change
+                    entry.pending = null;
+                    entry.media.replaceWith(next);
+                    entry.media = next;
+                    entry.src = v.src;
+                    entry.kind = v.kind;
+                };
+                next.addEventListener(v.kind === 'video' ? 'loadeddata' : 'load', swap, { once: true });
+                next.addEventListener('error', () => {
+                    // A broken state asset keeps the current visual; a broken main asset is shown as before
+                    if (isStateAsset) {
+                        if (entry.pending === key) entry.pending = null;
+                    } else {
+                        swap();
+                    }
+                }, { once: true });
+                if (v.kind === 'video') next.preload = 'auto';
+                next.src = v.src;
             }
 
             function layout(entry) {
@@ -258,7 +286,7 @@ export function getCompanionHtml(mode: RenderMode): string {
                 diff.added.forEach(c => {
                     const el = document.createElement('div');
                     el.className = 'companion';
-                    const entry = { data: c, el, media: null, src: null, kind: null };
+                    const entry = { data: c, el, media: null, src: null, kind: null, pending: null };
                     attachListeners(el, c.id);
                     entries.set(c.id, entry);
                     world.appendChild(el);

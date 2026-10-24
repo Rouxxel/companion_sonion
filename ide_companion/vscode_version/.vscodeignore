@@ -6,7 +6,7 @@ out/test/**
 .yarnrc
 vsc-extension-quickstart.md
 possible_improvements.md
-IMPLEMENTATION_PLAN.md
+AGENTS.md
 **/tsconfig.json
 **/eslint.config.mjs
 **/*.map

@@ -22,7 +22,7 @@ To generate .vsix locally navigate to the `ide_companion/vscode_version` folder 
 - **URL/Local Mode Toggle**: Switch between URL and local file modes in the sidebar with automatic disable logic
 - **Clear current Asset**: Option to clear local file selection and switch back to URL mode
 - **Relative Positioning**: Companions use percentage-based positioning (0-1) relative to window size for consistent placement across different screen sizes
-- **Split Panel View**: Companion panel opens in split right view for better workspace integration
+- **Split Panel View**: Companion panel opens in split right view for better workspace integration, and is reopened automatically after a window reload if it was open
 - **Explorer Sidebar Integration**: Render companions directly in the Explorer sidebar for a compact, always-visible view
 - **Mode Switching**: Move companions between Panel and Explorer modes via right-click context menu
 - **Profiles**: Save and load entire companion layouts as named profiles
@@ -74,6 +74,7 @@ Each companion can be in one of these states: `idle`, `typing`, `excited`, `reac
 - `idle` always shows the companion's main asset.
 - Every other state can have its own asset: right-click → **Set State Asset…**, or run `Companion: Set State Asset`.
 - States without their own asset show the main asset with a built-in animation: a small bob (typing), a bounce (excited), a short shake (reacting), or a dimmed, slowly breathing companion with "z z" (sleeping). Turn these off with the `companion.behavior.cssAnimations` setting; they are also disabled when your OS asks for reduced motion.
+- When a companion switches to an asset it hasn't shown yet, the current one stays on screen until the new one has loaded (no blank flash). If a state asset fails to load, the companion keeps showing its current asset.
 - To see what a state looks like, run `Companion: Preview State`. Previews are temporary and are not saved; the next reaction replaces them.
 
 ### Reactions
@@ -179,8 +180,8 @@ This extension contributes the following commands:
 
 ## Known Issues
 
-- The Panel is not reopened automatically after a window reload; your companions are kept and reappear when you spawn a companion or open the panel again
-- Reactions start once the extension is active, i.e. after a Companion view is shown or a Companion command is run
+- Reactions start once the extension is active: when the Panel is restored after a reload, a Companion view is shown, or a Companion command is run
+- If you closed the Panel before reloading, it stays closed; your companions are kept and reappear when you spawn a Panel companion or use **Move to Panel** from an Explorer companion's menu
 - Error reactions depend on your language extension reporting errors for the open file; files without a language server never trigger them
 - Typing detection is a heuristic: an edit at your cursor from another extension (e.g. an auto-closing helper) can count as typing, and typing over a selection spanning several lines doesn't
 - Large images or high refresh rates may impact performance
@@ -195,6 +196,7 @@ This extension contributes the following commands:
 - Behavior profiles: built-in (`default`, `calm`, `coder-pet`, `none`) or your own, per companion
 - WebM/MP4 companions play; companions update individually so animations no longer restart
 - Safer import: invalid entries are skipped and reported
+- The Panel reopens after a window reload; new assets swap in only once loaded
 - New settings under `companion.behavior.*` and commands Toggle Reactions, Set Behavior Profile, Set State Asset, Preview State
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
