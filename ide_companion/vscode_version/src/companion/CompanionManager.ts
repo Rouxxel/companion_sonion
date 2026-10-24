@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { Companion } from './Companion';
+import { Companion, CompanionChange } from './Companion';
+import { validateCompanions, ValidationResult } from './validation';
 // Use VS Code workspace fs API to avoid direct node fs dependencies
 
 const STORAGE_KEY = 'companions';
@@ -9,7 +10,7 @@ export class CompanionManager {
 
     private companions: Map<string, Companion> = new Map();
     private storageUri?: vscode.Uri;
-    private _onDidChange = new vscode.EventEmitter<void>();
+    private _onDidChange = new vscode.EventEmitter<CompanionChange>();
     public readonly onDidChange = this._onDidChange.event;
 
     constructor(private storage?: vscode.Memento, storageUri?: vscode.Uri) {
@@ -20,31 +21,31 @@ export class CompanionManager {
         }
     }
 
-    private async save() {
-        if (!this.storage) return;
+    private async save(ids?: string[]) {
+        if (!this.storage) { return; }
         await this.storage.update(STORAGE_KEY, Array.from(this.companions.values()));
-        this._onDidChange.fire();
+        this._onDidChange.fire({ ids });
         console.log("[save] Saved companion");
     }
 
     create(companion: Companion) {
         this.companions.set(companion.id, companion);
-        this.save();
+        this.save([companion.id]);
         console.log("[create] Created and saved companion");
     }
 
     update(id: string, data: Partial<Companion>) {
         const c = this.companions.get(id);
-        if (!c) return;
+        if (!c) { return; }
 
         this.companions.set(id, { ...c, ...data });
-        this.save();
+        this.save([id]);
         console.log("[update] Updated and saved companion");
     }
 
     delete(id: string) {
         this.companions.delete(id);
-        this.save();
+        this.save([id]);
         console.log("[delete] Deleted companion");
     }
 
@@ -70,31 +71,32 @@ export class CompanionManager {
 
     // Profiles
     async saveProfile(name: string) {
-        if (!this.storage) return;
+        if (!this.storage) { return; }
         const profiles = this.storage.get<Record<string, Companion[]>>(PROFILES_KEY, {});
         profiles[name] = this.getAll();
         await this.storage.update(PROFILES_KEY, profiles);
     }
 
     listProfiles(): string[] {
-        if (!this.storage) return [];
+        if (!this.storage) { return []; }
         const profiles = this.storage.get<Record<string, Companion[]>>(PROFILES_KEY, {});
         return Object.keys(profiles);
     }
 
-    async loadProfile(name: string) {
-        if (!this.storage) return;
+    async loadProfile(name: string): Promise<ValidationResult | undefined> {
+        if (!this.storage) { return undefined; }
         const profiles = this.storage.get<Record<string, Companion[]>>(PROFILES_KEY, {});
         const arr = profiles[name];
-        if (!arr) return;
-        this.companions.clear();
-        arr.forEach(c => this.companions.set(c.id, c));
+        if (!arr) { return undefined; }
+        const result = validateCompanions(arr);
+        this.replaceAll(result.companions);
         await this.save();
         console.log("[loadProfile] Loaded profile");
+        return result;
     }
 
     async deleteProfile(name: string) {
-        if (!this.storage) return;
+        if (!this.storage) { return; }
         const profiles = this.storage.get<Record<string, Companion[]>>(PROFILES_KEY, {});
         delete profiles[name];
         await this.storage.update(PROFILES_KEY, profiles);
@@ -109,20 +111,26 @@ export class CompanionManager {
         await vscode.workspace.fs.writeFile(uri, encoded);
     }
 
-    async importWorld(sourceFsPath: string) {
+    /** Throws (leaving the current companions untouched) if the file is not valid JSON or not an array. */
+    async importWorld(sourceFsPath: string): Promise<ValidationResult> {
         const uri = vscode.Uri.file(sourceFsPath);
         const bytes = await vscode.workspace.fs.readFile(uri);
         const raw = new TextDecoder().decode(bytes);
-        const arr = JSON.parse(raw) as Companion[];
-        this.companions.clear();
-        arr.forEach(c => this.companions.set(c.id, c));
+        const result = validateCompanions(JSON.parse(raw));
+        this.replaceAll(result.companions);
         await this.save();
         console.log("[importWorld] Imported world");
+        return result;
+    }
+
+    private replaceAll(companions: Companion[]) {
+        this.companions.clear();
+        companions.forEach(c => this.companions.set(c.id, c));
     }
 
     // Local asset import (copy into extension storage)
     async importLocalAsset(source: vscode.Uri): Promise<string | undefined> {
-        if (!this.storageUri) return undefined;
+        if (!this.storageUri) { return undefined; }
 
         const extIndex = source.path.lastIndexOf('.');
         const ext = extIndex !== -1 ? source.path.substring(extIndex) : '';
@@ -138,7 +146,7 @@ export class CompanionManager {
     }
 
     getLocalAssetFsPath(marker: string): vscode.Uri | undefined {
-        if (!marker || !marker.startsWith('local:') || !this.storageUri) return undefined;
+        if (!marker || !marker.startsWith('local:') || !this.storageUri) { return undefined; }
         const filename = marker.substring('local:'.length);
         console.log("[getLocalAssetFsPath] Getting local asset fs path");
         return vscode.Uri.joinPath(this.storageUri, filename);

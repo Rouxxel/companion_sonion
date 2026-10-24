@@ -10,6 +10,7 @@ lerna-debug.log*
 .env
 out
 *.vsix
+.vscode-test/
 
 node_modules
 dist
