@@ -1,20 +1,12 @@
-# Standalone Sonion Companion
+# Sonion Companion (Windows)
 
-A minimalist, borderless floating companion player. Each companion is a transparent, frameless window that can display PNG, JPEG, GIF, WebP, BMP, SVG, or WebM assets. Companions stay on top of other windows and disappear from the taskbar.
+A minimalist, borderless floating companion player for Windows. Each companion is a transparent, frameless window that shows a PNG, JPEG, GIF, WebP, BMP, SVG or WebM asset. Companions float above other windows without cluttering the taskbar; the app itself lives in the system tray and can be pinned to the taskbar like any other program.
 
 ## Install
 
 ### Installer (recommended)
 
-Build the Windows installer:
-
-```powershell
-cd standalone_desktop_version/windows
-npm install
-npm run package
-```
-
-This creates `release/SonionCompanion-Setup-<version>.exe` (for example `SonionCompanion-Setup-0.2.0.exe`). Run it and follow the steps:
+Run `SonionCompanion-Setup-<version>.exe` (for example `SonionCompanion-Setup-0.2.0.exe`) and follow the steps. To build it yourself, see [Build the installer](#build-the-installer).
 
 - It installs **for your user only**, so no administrator rights are needed. The default folder is `%LOCALAPPDATA%\Programs\Sonion Companion`, and you can choose another one.
 - It adds a **Start menu** entry and a **desktop shortcut**, and lists the app under **Settings → Apps → Installed apps**.
@@ -22,7 +14,7 @@ This creates `release/SonionCompanion-Setup-<version>.exe` (for example `SonionC
 
 **Pin to the taskbar:** open the Start menu, right-click **Sonion Companion** → **Pin to taskbar** (Windows doesn't let installers pin apps themselves). Clicking the pin while the app runs opens its Settings window.
 
-**Start with Windows:** the installed app starts automatically when you sign in to Windows. It turns this on the first time you open it. To turn it off, uncheck **Start with Windows** in the tray menu, or disable it in **Task Manager → Startup apps**. Your choice is kept: the app never turns it back on by itself.
+**Start with Windows:** the installed app starts automatically when you sign in to Windows. It turns this on the first time you open it. To turn it off, uncheck **Start with Windows** in the tray menu or in Settings, or disable it in **Task Manager → Startup apps**. Your choice is kept: the app never turns it back on by itself.
 
 **Updating:** run a newer installer over the existing installation. Your companions, layouts and the Start with Windows choice are kept.
 
@@ -36,38 +28,29 @@ Use **Settings → Apps → Installed apps → Sonion Companion → Uninstall** 
 
 ### Portable `.exe` (no installer)
 
-```powershell
-npm run package:portable
-```
-
-This creates `release/SonionCompanion-Portable-<version>.exe`, a single executable you can move anywhere and double-click to run. It doesn't start with Windows unless you turn that on in the tray menu; if you move the file afterwards, turn it on again.
+`SonionCompanion-Portable-<version>.exe` is a single executable you can move anywhere and double-click to run; build it with `npm run package:portable`. It starts more slowly than the installed app (about 10–15 seconds), because it unpacks itself to a temporary folder first. It uses the same data folder as the installed app. It doesn't start with Windows unless you turn that on in the tray menu or Settings. If you move the file afterwards, turn it on again.
 
 ## Run
 
-When running, Sonion Companion lives in the **system tray** (near the clock). Right-click the tray icon for Add companion, Settings, Start with Windows, or Quit.
+Sonion Companion lives in the **system tray** (near the clock; it may be hidden behind the **^** arrow). Right-click the tray icon for Add companion, Settings, Start with Windows or Quit; left-click opens Settings.
 
-Only one copy runs at a time. Launching it again (Start menu, desktop shortcut or a pinned taskbar icon) while it's already running opens the **Settings** window of the running copy instead of starting a second one. The first time you open it with no companions saved, Settings opens automatically (but not when Windows starts it at sign-in).
-
-For running from source, see [Development](#development).
+Only one copy runs at a time. Launching it again (Start menu, desktop shortcut or pinned taskbar icon) while it's already running opens the **Settings** window of the running copy instead of starting a second one. The first time you open it with no companions saved, Settings opens automatically (but not when Windows starts it at sign-in).
 
 ## Features
 
-- **Transparent frameless windows** — no title bar, no borders, no taskbar presence
-- **Always on top** — companions float above all other applications (toggleable)
-- **Multiple companions** — spawn as many as you want, each in its own window
-- **Drag to reposition** — click and hold to move companions freely
-- **Mouse wheel resize** — scroll up to enlarge, scroll down to shrink (40–500px range)
-- **Aspect-ratio aware** — window adapts to image dimensions (portrait, landscape, square)
-- **Hover opacity** — companions fade (30 % by default, adjustable in Settings) on hover so they don't block content
+- **Transparent frameless windows** — no title bar, no borders, companions don't show up in the taskbar
+- **Always on top** — companions float above other applications (can be turned off)
+- **Multiple companions** — spawn as many as you want (up to the limit in Settings), each in its own window
+- **Drag to reposition** and **mouse-wheel resize** — within the size limits from Settings
+- **Aspect-ratio aware** — the window adapts to the image (portrait, landscape, square)
+- **Hover opacity** — companions fade while the mouse is over them so they don't block content (30 % by default, adjustable)
 - **Multiple monitors** — companions remember which monitor they're on
 - **Lock/Unlock** — prevent accidental movement
-- **Context menu** — right-click for all actions
-- **Local and remote assets** — import from disk or paste a URL
-- **Asset caching** — remote URLs are cached locally after first download
-- **Auto-persistence** — state saves automatically to `companions.json`
-- **Profiles** — save/load named companion layouts via the Settings window
-- **System tray** — add companions, open settings, or quit from the tray icon
-- **Keyboard shortcuts** — system-wide hotkeys to add a companion or open Settings, chosen so they don't clash with common app shortcuts
+- **Local and remote assets** — pick a file or paste a URL; remote assets are cached after the first download
+- **Layouts** — save and load named arrangements of companions
+- **Auto-save** — everything is saved automatically
+- **System tray and system-wide shortcuts** — add a companion or open Settings from anywhere
+- **Start with Windows** — on by default for the installed app
 
 ## Controls
 
@@ -75,105 +58,133 @@ For running from source, see [Development](#development).
 
 | Action | Effect |
 |--------|--------|
-| Left-click + drag | Move companion |
-| Mouse wheel (hover) | Resize companion |
-| Right-click | Open context menu |
-| Double-click | *(reserved)* |
+| Left-click + drag | Move companion (not while locked) |
+| Mouse wheel over a companion | Resize it (within the Min/Max size from Settings) |
+| Right-click | Open the companion menu |
 
-### Context Menu
+### Companion menu (right-click)
 
-- **Lock position** / **Unlock position** — toggle movement lock
-- **Always on top** — toggle whether companions stay above other windows
-- **Bring to front** — raise this companion above others
-- **Change asset URL** — enter a remote image/GIF URL
-- **Import local asset** — pick a file from disk
-- **Clear current asset** — revert to the bundled default image
-- **Add another companion** — spawn a new companion
-- **Delete companion** — remove this companion
-- **Close** — dismiss the menu
+- **Lock position** / **Unlock position** — stop or allow moving and resizing this companion
+- **Always on top** — keep **all** companions above other windows (same as the Settings option)
+- **Bring to front** — raise this companion above the others
+- **Change asset URL** — show an image, GIF or WebM from the web
+- **Import local asset** — pick a file from disk (up to 25 MB)
+- **Clear current asset** — go back to the default image
+- **Add another companion**
+- **Delete companion**
+- **Close** — close the menu
 
-### Keyboard Shortcuts
+### Keyboard shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Delete` | Remove focused companion |
-| `L` | Toggle lock |
-| `Ctrl`/`Cmd` + `O` | Import local asset |
-| `Ctrl`/`Cmd` + `U` | Set asset URL |
-| `Ctrl` + `Alt` + `Shift` + `A` | Add a new companion (works from any app) |
-| `Ctrl` + `Alt` + `Shift` + `S` | Open settings (works from any app) |
-| `Escape` | Close menu or dialog |
+| Shortcut | Action | Works |
+|----------|--------|-------|
+| `Ctrl` + `Alt` + `Shift` + `A` | Add a new companion | From any app |
+| `Ctrl` + `Alt` + `Shift` + `S` | Open Settings | From any app |
+| `Delete` | Remove the focused companion | Companion focused |
+| `L` | Toggle lock | Companion focused |
+| `Ctrl` + `O` | Import local asset | Companion focused |
+| `Ctrl` + `U` | Set asset URL | Companion focused |
+| `Escape` | Close the menu or URL dialog | Companion focused |
 
-`Delete`, `L`, `Ctrl+O`, `Ctrl+U` and `Escape` only work while a companion has focus. The two `Ctrl+Alt+Shift` shortcuts are system-wide: they work from any app while Sonion Companion runs. Earlier versions used `Ctrl+Shift+A` / `Ctrl+Shift+S`, which took over shortcuts like *Save As* in other programs. If another app already uses one of these combinations, Sonion Companion skips it and the other app keeps it; Settings shows which shortcuts are active, and lets you change or turn them off. On keyboard layouts with an AltGr key, `Ctrl+Alt` acts as AltGr, so these combinations may type characters there.
+The two `Ctrl+Alt+Shift` shortcuts are system-wide. They were chosen so they don't take over common shortcuts in other programs (earlier versions used `Ctrl+Shift+A` / `Ctrl+Shift+S`, which blocked *Save As* elsewhere). If another app already uses one of them, Sonion Companion skips it and the other app keeps it. You can change or turn them off in Settings, which also shows whether each one is active. On keyboard layouts with an AltGr key, `Ctrl+Alt` acts as AltGr, so you may want to pick other combinations there.
 
-### System Tray
+### System tray
 
-- **Add companion** — spawn a new companion
-- **Settings** — open the settings window
-- **Start with Windows** — start automatically when you sign in (installed and portable app only; not available when running from source)
-- **Quit** — exit the application
+- **Add companion**
+- **Settings** (also on left-click)
+- **Start with Windows** — checkbox (installed and portable app only; not available when running from source)
+- **Quit**
 
 ## Settings
 
-Accessible via `Ctrl+Alt+Shift+S`, the tray icon, or by launching the app again from the Start menu or taskbar. Options include:
+Open it with `Ctrl+Alt+Shift+S`, from the tray icon, or by launching the app again from the Start menu or taskbar.
 
-- **Keep companions on top** — keep companions above other windows
-- **Default size** — size for newly spawned companions
-- **Min/Max size** — resize limits
-- **Max companions** — limit on total companions
-- **Opacity on hover** — how transparent a companion gets while the mouse is over it (5–100 %, default 30 %); applies immediately to all companions
-- **Start with Windows** — same switch as in the tray menu; only available in the installed (or portable) app
-- **Keyboard shortcuts** — turn the system-wide shortcuts on or off and change them. Each shortcut shows *Active* or *Not available* (another app uses it, or the combination isn't valid). Use Electron accelerator names such as `Control+Alt+Shift+A`
-- **Layouts** — save, load, and delete named layouts. Loading a layout restores companions and their display settings; it doesn't change your shortcuts or Start with Windows
-- **Open data folder** — opens the folder below in Explorer; the app version is shown at the bottom
+- **Keep companions on top**
+- **Default size** — size for new companions
+- **Minimum / Maximum size** — limits for mouse-wheel resizing
+- **Maximum companions** — how many companions can exist at once
+- **Opacity on hover** — how transparent a companion gets while the mouse is over it (5–100 %, default 30 %); applies immediately
+- **Start with Windows** — same switch as in the tray menu
+- **Keyboard shortcuts** — turn the system-wide shortcuts on or off and change them. Each one shows *Active* or *Not available* (another app uses it, or the combination isn't valid). Use Electron accelerator names, for example `Control+Alt+Shift+A`
+- **Layouts** — save, load and delete named layouts. Loading a layout restores companions and their display settings; it doesn't change your shortcuts or Start with Windows
+- **Open data folder** — opens the data folder in Explorer; the app version is shown at the bottom
 
 The Settings window updates itself when you change Start with Windows from the tray while it's open.
 
-## Data Storage
+## Data storage
 
-All data is stored in `%APPDATA%\Sonion Companion\` (use **Open data folder** in Settings):
+Everything is stored in `%APPDATA%\Sonion Companion\` (**Open data folder** in Settings):
 
 - `companions.json` — companions, settings and layouts
 - `asset-cache/` — cached remote assets
 - `session-data/` — browser cache used by the app's windows
 
+Local assets are referenced by their path on disk, not copied, so moving or deleting the file shows the default image instead.
+
 ### Multiple monitors
 
-Each companion remembers which monitor it's on and returns there after a restart. If that monitor isn't connected, the companion appears on the main monitor (or the monitor it's currently on) and moves back once you reconnect it. Positions saved by earlier versions are placed on the main monitor until you move the companion once.
+Each companion remembers which monitor it's on and returns there after a restart. If that monitor isn't connected, the companion appears on the main monitor (or the monitor it's currently on) and moves back once you reconnect it. Positions saved by version 0.1.0 are placed on the main monitor until you move the companion once.
 
-## Supported Formats
+## Supported formats
 
-PNG, JPEG, GIF, WebP, BMP, SVG, WebM
+PNG, JPEG, GIF, WebP, BMP, SVG and WebM. Local files up to 25 MB, remote files up to 15 MB.
 
-## Tech Stack
+## Troubleshooting
 
-- **Electron** — cross-platform desktop framework
-- **TypeScript** — main process and preload
-- **Vanilla JS/CSS** — renderer (no framework)
+- **Nothing seems to happen when I start it** — it's running in the tray (check behind the **^** arrow near the clock). Launch it again to open Settings.
+- **A shortcut doesn't work** — Settings shows *Not available* when another app already uses the combination; pick another one there.
+- **"Windows protected your PC" when installing** — the installer isn't code-signed. Click **More info → Run anyway**.
+- **It doesn't start with Windows** — check the tray menu or Settings, and **Task Manager → Startup apps** (it may be disabled there). It's only available in the installed or portable app.
+- **Start over with a clean slate** — quit from the tray, then rename or delete `companions.json` in the data folder. The app starts with default settings and one companion.
+- **"Your companions file couldn't be read"** — `companions.json` was damaged (for example by a typo while editing it). The app started with defaults and kept the damaged file next to it as `companions.corrupt-<date>.json`. Fix that file and rename it back to `companions.json` (with the app closed) to restore your companions.
+
+## Known limitations
+
+- Windows only.
+- The installer isn't code-signed, so SmartScreen warns on first run.
+- Very large GIFs may impact performance.
+- DPI scaling can occasionally cause minor visual differences, for example when dragging a companion between monitors with different scaling.
 
 ## Development
 
 Run everything from `standalone_desktop_version/windows`. Use `npm.cmd` instead of `npm` if PowerShell execution policies block the npm shim.
 
 ```powershell
-npm install             # First time (also downloads the Electron binary)
-npm start               # Build and launch
-npm run build           # Compile TypeScript + copy renderer files and resources into dist/
-npm run typecheck       # Type-check without emitting
-npm test                # Unit tests (data storage, layouts, multi-monitor geometry, startup entry)
-npm run test:install    # Installer round trip on this PC (see below)
-npm run package:dir     # Unpacked app in release/win-unpacked/ (fast check, no installer)
-npm run package         # Installer in release/
+npm install               # First time (also downloads the Electron binary)
+npm start                 # Build and launch from source
+npm run build             # Compile TypeScript + copy renderer files and resources into dist/
+npm run typecheck         # Type-check without emitting
+npm test                  # Unit tests (data storage, layouts, multi-monitor geometry, startup entry)
+npm run test:install      # Installer round trip on this PC (see below)
+npm run package:dir       # Unpacked app in release/win-unpacked/ (fast check, no installer)
+npm run package           # Installer in release/
 npm run package:portable  # Portable .exe in release/
 ```
 
-`npm run test:install` runs `scripts/smoke-install.ps1` against the newest installer in `release/`. It installs the app silently for your user, checks the shortcuts, Installed apps entry, single instance, Start with Windows, an update over the existing install, and a silent uninstall, then prints PASS/FAIL for each check. It backs up and restores your `companions.json` and uninstalls the app at the end. It won't run while the app is already installed (add `-Force` to replace that installation). Pass `-KeepInstalled` to leave the app installed for manual checks. Use Windows Sandbox or a VM if you'd rather not touch your own profile.
+### Build the installer
+
+```powershell
+cd standalone_desktop_version/windows
+npm install
+npm run package
+```
+
+This creates `release/SonionCompanion-Setup-<version>.exe`.
+
+`npm run test:install` runs `scripts/smoke-install.ps1` against the newest installer in `release/`. It installs the app silently for your user, checks the shortcuts, the Installed apps entry, single instance, Start with Windows, an update over the existing install and a silent uninstall, then prints PASS/FAIL for each check. It backs up and restores your `companions.json` and uninstalls the app at the end. It won't run while the app is already installed (add `-Force` to replace that installation). Pass `-KeepInstalled` to leave the app installed for manual checks. Use Windows Sandbox or a VM if you'd rather not touch your own profile.
+
+### Project layout
 
 Everything the build needs lives in this folder:
 
-- `src/` — main process, preload and renderer code
+- `src/` — main process, preload and renderer code (`src/test/` — unit tests)
 - `resources/assets/` — default companion image and tray icon (copied into the app)
-- `resources/build/icon.ico` — app/installer icon (16–256 px)
+- `resources/build/` — app/installer icon (`icon.ico`, 16–256 px) and uninstaller steps (`installer.nsh`)
+- `scripts/` — build helper and the installer smoke test
+
+Tech stack: Electron, TypeScript (main process and preload), vanilla JS/CSS (renderer), electron-builder (NSIS installer).
+
+### Build problems
 
 If `npm start` fails with `Cannot read properties of undefined (reading 'getPath')`, the environment variable `ELECTRON_RUN_AS_NODE` is set (some editors set it for their terminals); clear it with `Remove-Item Env:ELECTRON_RUN_AS_NODE` and try again.
 
@@ -183,9 +194,3 @@ If `npm run package` fails with `…__uninstaller.exe" -> no files found`, Windo
 npm run build
 npx electron-builder --win nsis "-c.directories.output=$env:LOCALAPPDATA\SonionCompanion-build"
 ```
-
-## Known Limitations
-
-- Transparent windows may behave differently across Linux compositors (X11 vs Wayland)
-- Very large GIFs may impact performance
-- DPI scaling on Windows can occasionally cause minor visual differences

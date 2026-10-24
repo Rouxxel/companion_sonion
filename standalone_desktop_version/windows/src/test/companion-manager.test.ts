@@ -52,11 +52,15 @@ describe("CompanionManager — loading", () => {
     assert.equal(new CompanionManager(dir).list().length, 2);
   });
 
-  test("corrupt JSON → safe defaults, and the corrupt file is left for recovery", () => {
+  test("corrupt JSON → safe defaults, and the corrupt file survives the next save", () => {
     writeConfig("{ not json");
     const manager = new CompanionManager(dir);
     assert.deepEqual(manager.list(), []);
-    assert.equal(readFileSync(configPath(), "utf8"), "{ not json");
+    assert.ok(manager.recoveredConfigPath, "the unreadable file was moved aside");
+    manager.create(); // the app saves right after startup
+    assert.equal(readFileSync(manager.recoveredConfigPath!, "utf8"), "{ not json");
+    assert.match(path.basename(manager.recoveredConfigPath!), /^companions\.corrupt-.+\.json$/);
+    assert.equal(readConfig().companions.length, 1);
   });
 
   test("out-of-range and invalid values are normalized", () => {
@@ -134,6 +138,7 @@ describe("CompanionManager — changes", () => {
     const manager = new CompanionManager(dir);
     for (let i = 0; i < 5; i++) manager.create();
     assert.deepEqual(readdirSync(dir), ["companions.json"]);
+    assert.equal(manager.recoveredConfigPath, undefined);
     assert.equal(readConfig().companions.length, 5);
   });
 });

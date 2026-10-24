@@ -6,6 +6,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-24
+
+First release with a Windows installer. Existing `companions.json` files from 0.1.0 load unchanged.
+
 ### Added
 
 - Windows installer `SonionCompanion-Setup-<version>.exe`: installs for the current user without administrator rights, adds Start menu and desktop shortcuts, and appears in Settings → Apps with name, version, publisher and icon. The app can be pinned to the taskbar
@@ -34,6 +38,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Resizing with the mouse wheel lagged one step behind (the window used the previous size)
 - Loading a layout no longer changes shortcuts or Start with Windows
 - A `companions.json` edited by hand and saved with a UTF-8 byte-order mark (e.g. by Notepad) no longer resets all companions and settings to defaults
+- An unreadable `companions.json` is no longer overwritten on the next save: it's kept as `companions.corrupt-<date>.json` and a message explains what happened
 
 ## [0.1.0]
 

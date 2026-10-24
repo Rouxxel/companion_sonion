@@ -433,6 +433,13 @@ if (isPrimaryInstance) {
 
   app.whenReady().then(() => {
     manager = new CompanionManager(app.getPath("userData"));
+    if (manager.recoveredConfigPath) {
+      void dialog.showMessageBox({
+        type: "warning", title: PRODUCT_NAME, noLink: true,
+        message: "Your companions file couldn't be read, so Sonion Companion started with default settings.",
+        detail: `The unreadable file was kept as:\n${manager.recoveredConfigPath}`
+      });
+    }
     const firstRun = manager.list().length === 0;
     registerIpc();
     try {

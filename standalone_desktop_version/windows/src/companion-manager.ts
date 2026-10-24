@@ -209,6 +209,8 @@ export class CompanionManager {
   }
 
   public getConfigPath(): string { return this.configPath; }
+  /** Set when companions.json couldn't be read at startup and was moved aside to this path. */
+  public recoveredConfigPath: string | undefined;
   public snapshot(): CompanionConfig { return clone(this.config); }
   public list(): Companion[] { return clone(this.config.companions); }
   public get(id: string): Companion | undefined {
@@ -307,8 +309,22 @@ export class CompanionManager {
       // Strip a UTF-8 byte-order mark: some editors add one when the file is edited by hand.
       return normalizeConfig(JSON.parse(readFileSync(this.configPath, "utf8").replace(/^\uFEFF/, "")) as unknown);
     } catch {
-      // Keep a corrupt file available for recovery and start from safe defaults.
+      // Keep a corrupt file available for recovery and start from safe defaults. The next save
+      // would overwrite companions.json, so move the unreadable file aside first.
+      this.recoveredConfigPath = this.preserveUnreadableConfig();
       return normalizeConfig({});
+    }
+  }
+
+  /** Renames an unreadable companions.json to companions.corrupt-<timestamp>.json; returns the new path. */
+  private preserveUnreadableConfig(): string | undefined {
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const target = path.join(path.dirname(this.configPath), `${path.parse(this.configPath).name}.corrupt-${stamp}.json`);
+    try {
+      renameSync(this.configPath, target);
+      return target;
+    } catch {
+      return undefined;
     }
   }
 
