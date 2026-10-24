@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-24
+
+### Changed
+
+- Minimum VS Code version lowered from 1.120 to 1.89, so the extension installs in editors built on older VS Code versions, such as Cursor, Windsurf, Kiro, Antigravity and VSCodium. No features changed; 1.89 is the oldest version that provides every API the extension uses
+
 ## [0.3.0] - 2026-10-24
 
 Companions now react to what you do. Existing companions, profiles and exports from 0.2.x keep working unchanged; turn reactions off with `Companion: Toggle Reactions` to get the 0.2.x behavior.

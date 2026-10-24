@@ -45,7 +45,8 @@ suite('Extension Test Suite', () => {
 		assert.strictEqual(CompanionPanel.currentPanel, undefined, 'disposing the panel clears it');
 	});
 
-	test('toggling reactions updates the setting without errors', async () => {
+	test('toggling reactions updates the setting without errors', async function () {
+		this.timeout(10_000); // writes user settings twice
 		const settings = () => vscode.workspace.getConfiguration('companion.behavior');
 		const before = settings().inspect<boolean>('enabled')?.globalValue;
 		try {

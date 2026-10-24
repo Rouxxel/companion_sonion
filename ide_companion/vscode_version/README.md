@@ -29,6 +29,12 @@ To generate .vsix locally navigate to the `ide_companion/vscode_version` folder 
 - **Import/Export**: Export your world state to JSON and import it later to restore your companions
 - **Persistence**: All companion positions, sizes, and settings are automatically saved and restored on startup
 
+## Compatibility
+
+- Requires VS Code **1.89** or newer.
+- Also works in editors built on VS Code (Cursor, Windsurf, Kiro, Antigravity, VSCodium, …) whose VS Code base is 1.89 or newer. You can see an editor's base under **Help → About** (the "VS Code" or "Code" version line).
+- Those editors usually install extensions from [Open VSX](https://open-vsx.org) instead of the VS Code Marketplace. If Companion Sonion isn't listed there, download the `.vsix` (from the Marketplace page via **Download Extension**, or build it as described above) and install it with **Extensions: Install from VSIX…**, or by dragging the file into the Extensions view.
+
 ## Usage
 
 ### Basic Controls
@@ -188,6 +194,10 @@ This extension contributes the following commands:
 - Explorer mode companions are constrained to the sidebar viewport and cannot overlay native Explorer content
 
 ## Release Notes
+
+### 0.3.1
+
+- Minimum VS Code version lowered to 1.89, so the extension installs in VS Code-based editors such as Cursor, Windsurf, Kiro and Antigravity (see [Compatibility](#compatibility)). No feature changes
 
 ### 0.3.0
 
