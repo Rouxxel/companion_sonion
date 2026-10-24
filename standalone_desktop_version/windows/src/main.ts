@@ -3,7 +3,8 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { Companion, CompanionManager, CompanionSettings } from "./companion-manager";
+import { APP_ID, launchedAtLogin, PRODUCT_NAME } from "./app-identity";
+import { Companion, CompanionManager, CompanionSettings, ShortcutSettings } from "./companion-manager";
 
 type PointDelta = { x: number; y: number };
 type CompanionView = Companion & { assetUrl: string; settings: CompanionSettings };
@@ -21,11 +22,19 @@ app.setPath("userData", appDataPath);
 app.setPath("sessionData", sessionDataPath);
 app.commandLine.appendSwitch("disk-cache-dir", path.join(sessionDataPath, "cache"));
 
+// Only one process may own companions.json. The lock is tied to the userData path set above,
+// so it must be requested after setPath. A second launch (e.g. clicking the pinned taskbar icon
+// while the app runs) hands over to the running instance and exits.
+const isPrimaryInstance = app.requestSingleInstanceLock();
+if (!isPrimaryInstance) app.quit();
+
 let manager: CompanionManager;
 const companionWindows = new Map<string, BrowserWindow>();
 const companionAspectRatios = new Map<string, number>();
 let tray: Tray | undefined;
 let settingsWindow: BrowserWindow | undefined;
+/** Whether each global shortcut could be registered (false = taken by another app or invalid). */
+let shortcutStatus = { addCompanion: false, openSettings: false };
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -40,6 +49,23 @@ function senderCompanion(event: Electron.IpcMainInvokeEvent): [string, BrowserWi
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "The requested action could not be completed.";
+}
+
+function showError(title: string, error: unknown): void {
+  const detail = /limit \(\d+\) reached/i.test(errorMessage(error))
+    ? `${errorMessage(error)} You can raise the limit in Settings.`
+    : errorMessage(error);
+  void dialog.showMessageBox({ type: "warning", title: PRODUCT_NAME, message: title, detail, noLink: true });
+}
+
+/** Runs a user-triggered action (tray, shortcut, IPC) and shows a friendly message instead of a main-process crash dialog. */
+function runAction(title: string, action: () => unknown): void {
+  Promise.resolve().then(action).catch((error: unknown) => showError(title, error));
+}
+
+function addCompanion(): void {
+  const companion = manager.create();
+  createCompanionWindow(companion);
 }
 
 function validateLocalAsset(filePath: string): string {
@@ -158,7 +184,11 @@ function createCompanionWindow(companion: Companion): BrowserWindow {
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.loadFile(path.join(__dirname, "renderer", "companion-window.html"));
   window.once("ready-to-show", () => { window.showInactive(); void sendState(companion.id); });
-  window.on("focus", () => { if (!companion.locked) { manager.bringToFront(companion.id); } });
+  window.on("focus", () => {
+    // Read the current state: the `companion` captured at creation has a stale `locked` flag.
+    const current = manager.get(companion.id);
+    if (current && !current.locked) manager.bringToFront(companion.id);
+  });
   window.on("closed", () => { companionWindows.delete(companion.id); });
   return window;
 }
@@ -176,20 +206,56 @@ function restoreWindows(): void {
   restore.sort((a, b) => a.zIndex - b.zIndex).forEach(createCompanionWindow);
 }
 
+/**
+ * The Settings window is the app's only taskbar-visible window: opening the app from the
+ * Start menu or the pinned taskbar icon shows it, and it groups under that pin (same AppUserModelID).
+ */
 function showSettings(): void {
-  if (settingsWindow && !settingsWindow.isDestroyed()) { settingsWindow.show(); settingsWindow.focus(); return; }
-  settingsWindow = new BrowserWindow({ width: 430, height: 330, title: "Companion settings", webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    if (settingsWindow.isMinimized()) settingsWindow.restore();
+    settingsWindow.show();
+    settingsWindow.focus();
+    return;
+  }
+  settingsWindow = new BrowserWindow({
+    width: 430, height: 330, title: PRODUCT_NAME, show: false,
+    // Packaged builds use the icon embedded in the .exe; dev runs would otherwise show Electron's.
+    ...(app.isPackaged ? {} : { icon: path.join(__dirname, "..", "resources", "build", "icon.ico") }),
+    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true }
+  });
   settingsWindow.setMenuBarVisibility(false);
   settingsWindow.loadFile(path.join(__dirname, "renderer", "settings.html"));
+  settingsWindow.once("ready-to-show", () => { settingsWindow?.show(); settingsWindow?.focus(); });
   settingsWindow.on("closed", () => { settingsWindow = undefined; });
+}
+
+/** (Re)registers the global shortcuts from settings and records which ones succeeded. */
+function applyShortcuts(shortcuts: ShortcutSettings): void {
+  globalShortcut.unregisterAll();
+  shortcutStatus = { addCompanion: false, openSettings: false };
+  if (!shortcuts.enabled) return;
+  const register = (accelerator: string, action: () => void): boolean => {
+    try {
+      return globalShortcut.register(accelerator, action);
+    } catch {
+      return false; // invalid accelerator string
+    }
+  };
+  shortcutStatus = {
+    addCompanion: register(shortcuts.addCompanion, () => runAction("Could not add a companion", addCompanion)),
+    openSettings: register(shortcuts.openSettings, showSettings)
+  };
+  for (const [name, ok] of Object.entries(shortcutStatus)) {
+    if (!ok) console.warn(`[shortcuts] ${name} (${shortcuts[name as keyof typeof shortcutStatus]}) could not be registered; another app may be using it.`);
+  }
 }
 
 function createTray(): void {
   const icon = nativeImage.createFromPath(path.join(__dirname, "assets", "tray-icon.png")).resize({ width: 16, height: 16 });
   tray = new Tray(icon);
-  tray.setToolTip("Sonion Companion");
+  tray.setToolTip(PRODUCT_NAME);
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: "Add companion", click: () => { const companion = manager.create(); createCompanionWindow(companion); } },
+    { label: "Add companion", click: () => runAction("Could not add a companion", addCompanion) },
     { label: "Settings", click: showSettings },
     { type: "separator" },
     { label: "Quit", click: () => app.quit() }
@@ -289,23 +355,46 @@ function registerIpc(): void {
     window.setBounds({ x: cx - Math.round(w / 2), y: cy - Math.round(h / 2), width: w, height: h });
   });
   ipcMain.handle("companion:remove", (event) => { const found = senderCompanion(event); if (found) removeCompanion(found[0]); });
-  ipcMain.handle("companion:add-companion", () => { const companion = manager.create(); createCompanionWindow(companion); });
+  ipcMain.handle("companion:add-companion", () => { runAction("Could not add a companion", addCompanion); });
   ipcMain.handle("companion:choose-local-asset", async (event) => {
     const found = senderCompanion(event); if (!found) return undefined; const result = await dialog.showOpenDialog(found[1], { properties: ["openFile"], filters: [{ name: "Companion assets", extensions: [...ALLOWED_EXTENSIONS].map((x) => x.slice(1)) }] });
     if (result.canceled || !result.filePaths[0]) return sendState(found[0]); manager.update(found[0], { assetPath: validateLocalAsset(result.filePaths[0]), assetType: "local" }); return sendState(found[0]);
   });
-  ipcMain.handle("companion:set-asset-url", async (event, value: string) => { const found = senderCompanion(event); if (!found || typeof value !== "string") return undefined; validateRemoteUrl(value); manager.update(found[0], { assetPath: value.trim(), assetType: "url" }); return sendState(found[0]); });
+  ipcMain.handle("companion:set-asset-url", async (event, value: string) => { const found = senderCompanion(event); if (!found || typeof value !== "string") return undefined; const url = value.trim(); validateRemoteUrl(url); manager.update(found[0], { assetPath: url, assetType: "url" }); return sendState(found[0]); });
   ipcMain.handle("companion:clear-local-asset", async (event) => { const found = senderCompanion(event); if (!found) return undefined; manager.update(found[0], { assetPath: "assets/sonion.jpeg", assetType: "bundled" }); return sendState(found[0]); });
   ipcMain.handle("companion:report-asset-error", async (event) => { const found = senderCompanion(event); if (!found) return undefined; manager.update(found[0], { assetPath: "assets/sonion.jpeg", assetType: "bundled" }); return sendState(found[0]); });
   ipcMain.handle("app:get-settings", () => manager.snapshot());
-  ipcMain.handle("app:update-settings", (_event, updates: Partial<CompanionSettings>) => { const settings = manager.updateSettings(updates ?? {}); for (const [id, window] of companionWindows) { const companion = manager.get(id); if (companion && !window.isDestroyed()) { applyCompanion(companion, window); void sendState(id); } } return settings; });
+  ipcMain.handle("app:update-settings", (_event, updates: Partial<CompanionSettings>) => {
+    const before = manager.snapshot().settings.shortcuts;
+    const settings = manager.updateSettings(updates ?? {});
+    if (JSON.stringify(before) !== JSON.stringify(settings.shortcuts)) applyShortcuts(settings.shortcuts);
+    for (const [id, window] of companionWindows) { const companion = manager.get(id); if (companion && !window.isDestroyed()) { applyCompanion(companion, window); void sendState(id); } }
+    return settings;
+  });
   ipcMain.handle("app:add-companion", () => { const companion = manager.create(); createCompanionWindow(companion); return companion.id; });
   ipcMain.handle("app:list-profiles", () => manager.listProfiles());
   ipcMain.handle("app:save-profile", (_event, name: string) => { manager.saveProfile(name); return manager.listProfiles(); });
-  ipcMain.handle("app:load-profile", (_event, name: string) => { manager.loadProfile(name); for (const window of companionWindows.values()) window.destroy(); restoreWindows(); return manager.snapshot(); });
+  ipcMain.handle("app:load-profile", (_event, name: string) => { manager.loadProfile(name); for (const window of companionWindows.values()) window.destroy(); companionAspectRatios.clear(); restoreWindows(); return manager.snapshot(); });
   ipcMain.handle("app:delete-profile", (_event, name: string) => manager.deleteProfile(name));
 }
 
-app.whenReady().then(() => { manager = new CompanionManager(app.getPath("userData")); registerIpc(); restoreWindows(); createTray(); globalShortcut.register("CommandOrControl+Shift+A", () => { const companion = manager.create(); createCompanionWindow(companion); }); globalShortcut.register("CommandOrControl+Shift+S", showSettings); app.on("activate", () => { if (!companionWindows.size) restoreWindows(); }); });
-app.on("window-all-closed", () => { /* The tray keeps the companion service available. */ });
-app.on("before-quit", () => { globalShortcut.unregisterAll(); tray?.destroy(); tray = undefined; });
+if (isPrimaryInstance) {
+  // Taskbar grouping: windows share the AppUserModelID of the installer's Start-menu/taskbar shortcut.
+  app.setAppUserModelId(APP_ID);
+
+  app.on("second-instance", () => { if (app.isReady()) showSettings(); });
+
+  app.whenReady().then(() => {
+    manager = new CompanionManager(app.getPath("userData"));
+    const firstRun = manager.list().length === 0;
+    registerIpc();
+    restoreWindows();
+    createTray();
+    applyShortcuts(manager.snapshot().settings.shortcuts);
+    // Opened by hand with nothing saved yet: show Settings so the app doesn't look like it did nothing.
+    if (firstRun && !launchedAtLogin()) showSettings();
+    app.on("activate", () => { if (!companionWindows.size) restoreWindows(); });
+  });
+  app.on("window-all-closed", () => { /* The tray keeps the companion service available. */ });
+  app.on("before-quit", () => { globalShortcut.unregisterAll(); tray?.destroy(); tray = undefined; });
+}

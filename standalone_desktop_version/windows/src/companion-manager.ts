@@ -20,6 +20,13 @@ export interface Companion {
   zIndex: number;
 }
 
+export interface ShortcutSettings {
+  enabled: boolean;
+  /** Electron accelerator, e.g. "Control+Alt+Shift+A". */
+  addCompanion: string;
+  openSettings: string;
+}
+
 export interface CompanionSettings {
   alwaysOnTop: boolean;
   defaultSize: number;
@@ -28,6 +35,8 @@ export interface CompanionSettings {
   hoverOpacity: number;
   /** A soft limit that callers can enforce before creating a window. */
   maxCompanions: number;
+  /** System-wide shortcuts; defaults avoid common app shortcuts such as Ctrl+Shift+S (Save As). */
+  shortcuts: ShortcutSettings;
 }
 
 export interface CompanionProfile {
@@ -48,13 +57,20 @@ export type UpdateCompanionInput = Partial<Omit<Companion, "id">>;
 
 const DEFAULT_ASSET_PATH = "assets/sonion.jpeg";
 
+export const DEFAULT_SHORTCUTS: Readonly<ShortcutSettings> = Object.freeze({
+  enabled: true,
+  addCompanion: "Control+Alt+Shift+A",
+  openSettings: "Control+Alt+Shift+S"
+});
+
 export const DEFAULT_SETTINGS: Readonly<CompanionSettings> = Object.freeze({
   alwaysOnTop: true, //Change to make it be another window or always in front by default
   defaultSize: 180,
   minSize: 40,
   maxSize: 500,
   hoverOpacity: 0.3,
-  maxCompanions: 25
+  maxCompanions: 25,
+  shortcuts: DEFAULT_SHORTCUTS
 });
 
 function clone<T>(value: T): T {
@@ -73,6 +89,19 @@ function stringOr(value: unknown, fallback: string): string {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
 }
 
+function acceleratorOr(value: unknown, fallback: string): string {
+  return typeof value === "string" && value.trim().length > 0 && value.trim().length <= 64 ? value.trim() : fallback;
+}
+
+function normalizeShortcuts(value: unknown): ShortcutSettings {
+  const source = isRecord(value) ? value : {};
+  return {
+    enabled: typeof source.enabled === "boolean" ? source.enabled : DEFAULT_SHORTCUTS.enabled,
+    addCompanion: acceleratorOr(source.addCompanion, DEFAULT_SHORTCUTS.addCompanion),
+    openSettings: acceleratorOr(source.openSettings, DEFAULT_SHORTCUTS.openSettings)
+  };
+}
+
 function normalizeSettings(value: unknown): CompanionSettings {
   const source = isRecord(value) ? value : {};
   const minSize = numberInRange(source.minSize, DEFAULT_SETTINGS.minSize, 16, 2000);
@@ -83,7 +112,8 @@ function normalizeSettings(value: unknown): CompanionSettings {
     minSize,
     maxSize,
     hoverOpacity: numberInRange(source.hoverOpacity, DEFAULT_SETTINGS.hoverOpacity, 0.05, 1),
-    maxCompanions: Math.round(numberInRange(source.maxCompanions, DEFAULT_SETTINGS.maxCompanions, 1, 100))
+    maxCompanions: Math.round(numberInRange(source.maxCompanions, DEFAULT_SETTINGS.maxCompanions, 1, 100)),
+    shortcuts: normalizeShortcuts(source.shortcuts)
   };
 }
 

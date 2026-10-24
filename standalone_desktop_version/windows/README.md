@@ -18,6 +18,8 @@ After it finishes, run the installer from `release/Sonion Companion Setup 0.1.0.
 
 When running, Sonion Companion lives in the **system tray** (near the clock). Right-click the tray icon for Add companion, Settings, or Quit.
 
+Only one copy runs at a time. Launching it again (Start menu, desktop shortcut or a pinned taskbar icon) while it's already running opens the **Settings** window of the running copy instead of starting a second one. The first time you open it with no companions saved, Settings opens automatically.
+
 ### Development
 
 See [Development](#development) below.
@@ -46,7 +48,7 @@ This creates `release/Sonion Companion 0.1.0.exe` — a single portable executab
 - **Auto-persistence** — state saves automatically to `companions.json`
 - **Profiles** — save/load named companion layouts via the Settings window
 - **System tray** — add companions, open settings, or quit from the tray icon
-- **Keyboard shortcuts** — global hotkeys for quick actions
+- **Keyboard shortcuts** — system-wide hotkeys to add a companion or open Settings, chosen so they don't clash with common app shortcuts
 
 ## Controls
 
@@ -79,9 +81,11 @@ This creates `release/Sonion Companion 0.1.0.exe` — a single portable executab
 | `L` | Toggle lock |
 | `Ctrl`/`Cmd` + `O` | Import local asset |
 | `Ctrl`/`Cmd` + `U` | Set asset URL |
-| `Ctrl`/`Cmd` + `Shift` + `A` | Add a new companion |
-| `Ctrl`/`Cmd` + `Shift` + `S` | Open settings |
+| `Ctrl` + `Alt` + `Shift` + `A` | Add a new companion (works from any app) |
+| `Ctrl` + `Alt` + `Shift` + `S` | Open settings (works from any app) |
 | `Escape` | Close menu or dialog |
+
+`Delete`, `L`, `Ctrl+O`, `Ctrl+U` and `Escape` only work while a companion has focus. The two `Ctrl+Alt+Shift` shortcuts are system-wide: they work from any app while Sonion Companion runs. Earlier versions used `Ctrl+Shift+A` / `Ctrl+Shift+S`, which took over shortcuts like *Save As* in other programs. If another app already uses one of these combinations, Sonion Companion skips it and the other app keeps it. On keyboard layouts with an AltGr key, `Ctrl+Alt` acts as AltGr, so these combinations may type characters there.
 
 ### System Tray
 
@@ -91,7 +95,7 @@ This creates `release/Sonion Companion 0.1.0.exe` — a single portable executab
 
 ## Settings
 
-Accessible via `Ctrl+Shift+S` or the tray icon. Options include:
+Accessible via `Ctrl+Alt+Shift+S`, the tray icon, or by launching the app again from the Start menu or taskbar. Options include:
 
 - **Always on top** — keep companions above other windows
 - **Default size** — size for newly spawned companions
