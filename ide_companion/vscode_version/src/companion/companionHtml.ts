@@ -159,6 +159,15 @@ export function getCompanionHtml(mode: RenderMode): string {
                 }
             });
 
+            // Tell the extension the user is here (wakes sleeping companions); at most once per second
+            let lastActivity = 0;
+            function reportActivity() {
+                const now = Date.now();
+                if (now - lastActivity < 1000) return;
+                lastActivity = now;
+                vscode.postMessage({ command: 'activity' });
+            }
+
             // Own asset for the current state, if the companion has one
             function stateVisual(c) {
                 return c.state && c.stateVisuals ? c.stateVisuals[c.state] || null : null;
@@ -270,6 +279,7 @@ export function getCompanionHtml(mode: RenderMode): string {
 
             function attachListeners(el, id) {
                 el.addEventListener('mousedown', (e) => {
+                    reportActivity();
                     const entry = entries.get(id);
                     if (!entry || entry.data.locked || e.button !== 0) return;
                     e.preventDefault();
@@ -314,6 +324,7 @@ export function getCompanionHtml(mode: RenderMode): string {
                 });
 
                 el.addEventListener('mouseenter', () => {
+                    reportActivity();
                     el.classList.add('hovered');
                 });
 

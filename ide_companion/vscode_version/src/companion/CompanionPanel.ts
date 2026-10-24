@@ -71,7 +71,7 @@ export class CompanionPanel {
             CompanionPanel.currentPanel = undefined;
         });
 
-        this.panel.webview.onDidReceiveMessage(msg => handleWebviewMessage(this.manager, msg, 'panel'));
+        this.panel.webview.onDidReceiveMessage(msg => handleWebviewMessage(this.manager, this.states, msg, 'panel'));
 
         this.startRenderLoop();
         this.panel.webview.html = this.getHtml();

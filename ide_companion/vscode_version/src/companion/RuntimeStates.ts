@@ -10,6 +10,13 @@ export class RuntimeStates implements vscode.Disposable {
     private states = new Map<string, CompanionState>();
     private _onDidChange = new vscode.EventEmitter<{ id: string; state: CompanionState }>();
     public readonly onDidChange = this._onDidChange.event;
+    private _onDidReportActivity = new vscode.EventEmitter<void>();
+    /** Fires when the user interacts with a companion in a webview (hover / drag). */
+    public readonly onDidReportActivity = this._onDidReportActivity.event;
+
+    reportActivity() {
+        this._onDidReportActivity.fire();
+    }
 
     get(id: string): CompanionState {
         return this.states.get(id) ?? 'idle';
@@ -37,5 +44,6 @@ export class RuntimeStates implements vscode.Disposable {
 
     dispose() {
         this._onDidChange.dispose();
+        this._onDidReportActivity.dispose();
     }
 }

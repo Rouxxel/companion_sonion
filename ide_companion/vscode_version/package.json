@@ -60,6 +60,10 @@
         "title": "Companion: Move To Panel"
       },
       {
+        "command": "companion.toggleBehavior",
+        "title": "Companion: Toggle Reactions"
+      },
+      {
         "command": "companion.setStateAsset",
         "title": "Companion: Set State Asset"
       },
@@ -87,9 +91,94 @@
     "configuration": {
       "title": "Companion Sonion",
       "properties": {
+        "companion.behavior.enabled": {
+          "type": "boolean",
+          "default": true,
+          "order": 0,
+          "description": "Let companions react to what you do (typing, fast typing, inactivity). When off, companions always show their main asset."
+        },
+        "companion.behavior.sleepAfterSeconds": {
+          "type": "number",
+          "default": 120,
+          "minimum": 10,
+          "order": 1,
+          "description": "Seconds without any activity (typing, cursor moves, scrolling, switching editors, hovering a companion) before companions fall asleep."
+        },
+        "companion.behavior.typingCooldownMs": {
+          "type": "number",
+          "default": 1500,
+          "minimum": 200,
+          "order": 2,
+          "description": "Milliseconds after your last keystroke before companions stop showing the typing state."
+        },
+        "companion.behavior.excitedCharsPerSecond": {
+          "type": "number",
+          "default": 8,
+          "minimum": 0,
+          "order": 3,
+          "description": "Typing speed (characters per second, averaged over 3 seconds) that makes companions excited. Pastes count as at most 20 characters. 0 disables."
+        },
+        "companion.behavior.reactionDurationMs": {
+          "type": "number",
+          "default": 3000,
+          "minimum": 100,
+          "order": 4,
+          "description": "How long short reactions last when a behavior rule doesn't set its own durationMs."
+        },
+        "companion.behavior.defaultProfile": {
+          "type": "string",
+          "default": "default",
+          "order": 5,
+          "description": "Behavior profile used by companions: a built-in one (default, calm, coder-pet, none) or the name of one of your companion.behavior.profiles.",
+          "examples": ["default", "calm", "coder-pet", "none"]
+        },
+        "companion.behavior.profiles": {
+          "type": "array",
+          "default": [],
+          "order": 6,
+          "markdownDescription": "Your own behavior profiles. A profile with the same name as a built-in one replaces it. Each rule maps an event to a state, e.g. `{ \"name\": \"chill\", \"rules\": [{ \"on\": \"typing\", \"state\": \"typing\", \"when\": { \"languageId\": [\"python\"] } }, { \"on\": \"inactive\", \"state\": \"sleeping\" }] }`. Invalid profiles are skipped with a warning.",
+          "items": {
+            "type": "object",
+            "required": ["name", "rules"],
+            "properties": {
+              "name": { "type": "string" },
+              "rules": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["on", "state"],
+                  "properties": {
+                    "on": {
+                      "type": "string",
+                      "enum": ["typing", "rapidTyping", "inactive", "activity", "typingStopped", "errorAppeared", "errorsCleared"],
+                      "enumDescriptions": [
+                        "While you are typing",
+                        "While you type fast",
+                        "While you are away (after sleepAfterSeconds)",
+                        "Short reaction to any other interaction",
+                        "Short reaction when you stop typing",
+                        "Short reaction when errors appear in the active file",
+                        "Short reaction when the active file's errors are fixed"
+                      ]
+                    },
+                    "state": { "type": "string", "enum": ["idle", "typing", "excited", "reacting", "sleeping"] },
+                    "when": {
+                      "type": "object",
+                      "properties": {
+                        "languageId": { "type": "array", "items": { "type": "string" } }
+                      }
+                    },
+                    "durationMs": { "type": "number", "minimum": 1 }
+                  }
+                }
+              }
+            }
+          }
+        },
         "companion.behavior.cssAnimations": {
           "type": "boolean",
           "default": true,
+          "order": 7,
           "description": "Play built-in animations (bob, bounce, shake, doze) for states that have no asset of their own. Disabled automatically when the OS requests reduced motion."
         }
       }

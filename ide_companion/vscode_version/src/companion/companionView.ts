@@ -257,6 +257,7 @@ async function showCompanionContextMenu(
 
 export async function handleWebviewMessage(
     manager: CompanionManager,
+    states: RuntimeStates,
     msg: any,
     mode: RenderMode,
     onMoved?: (target: RenderMode) => void
@@ -273,6 +274,9 @@ export async function handleWebviewMessage(
             break;
         case 'contextMenu':
             await showCompanionContextMenu(manager, msg.id, mode, onMoved);
+            break;
+        case 'activity':
+            states.reportActivity();
             break;
     }
 }

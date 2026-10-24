@@ -64,7 +64,7 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider, vs
             }),
 
             // Handle messages from the webview
-            webviewView.webview.onDidReceiveMessage(msg => handleWebviewMessage(this.manager, msg, 'explorer', target => {
+            webviewView.webview.onDidReceiveMessage(msg => handleWebviewMessage(this.manager, this.states, msg, 'explorer', target => {
                 // Open the panel if it's not already open
                 if (target === 'panel') {
                     CompanionPanel.createOrShow(this.extensionUri, this.manager, this.states);

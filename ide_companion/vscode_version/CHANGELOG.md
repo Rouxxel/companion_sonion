@@ -8,6 +8,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ### Added
 
+- Reactions: companions show `typing` while you type in the active editor, `excited` when you type fast, and `sleeping` after inactivity, and wake on any interaction. Formatter, git, output-panel and undo/redo edits don't count as typing, and reactions never write to your saved companions
+- `Companion: Toggle Reactions` command and `companion.behavior.*` settings (enabled, sleepAfterSeconds, typingCooldownMs, excitedCharsPerSecond, reactionDurationMs, defaultProfile, profiles)
+- Built-in behavior profiles (`default`, `calm`, `coder-pet`, `none`) and user-defined profiles with language filters
 - Animation states (`idle`, `typing`, `excited`, `reacting`, `sleeping`) with an optional asset per state: context menu **Set State Asset…** and command `Companion: Set State Asset`
 - Built-in fallback animations for states without their own asset, controlled by the new `companion.behavior.cssAnimations` setting and disabled under reduced motion
 - `Companion: Preview State` command to try a state temporarily (not saved)

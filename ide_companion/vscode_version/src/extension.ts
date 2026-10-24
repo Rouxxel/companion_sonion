@@ -6,6 +6,9 @@ import { CompanionExplorerProvider } from './companion/CompanionExplorerProvider
 import { DEFAULT_ASSET_URL, DEFAULT_SIZE } from './companion/constants';
 import { pickCompanion, promptPreviewState, promptSetStateAsset } from './companion/companionView';
 import { RuntimeStates } from './companion/RuntimeStates';
+import { ActivitySource } from './behavior/ActivitySource';
+import { BehaviorEngine } from './behavior/BehaviorEngine';
+import { BEHAVIOR_SECTION, getBehaviorConfig, warnInvalidProfiles } from './behavior/config';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -27,6 +30,9 @@ export function activate(context: vscode.ExtensionContext) {
         states,
         manager.onDidChange(() => states.retain(manager.getAll().map(c => c.id)))
     );
+
+    // BEHAVIOR ENGINE (reactions to typing / inactivity)
+    startBehavior(context, manager, states);
 
     // EXPLORER SIDEBAR PROVIDER
     const explorerProvider = new CompanionExplorerProvider(context.extensionUri, manager, states);
@@ -164,6 +170,50 @@ export function activate(context: vscode.ExtensionContext) {
                 vscode.window.showErrorMessage(`Could not import world: ${e instanceof Error ? e.message : String(e)}`);
             }
         })
+    );
+}
+
+function startBehavior(context: vscode.ExtensionContext, manager: CompanionManager, states: RuntimeStates) {
+    const initial = getBehaviorConfig();
+    warnInvalidProfiles(initial.errors);
+
+    const engine = new BehaviorEngine(initial.config);
+    let enabled = initial.config.enabled;
+    let source: ActivitySource | undefined;
+
+    const syncSource = () => {
+        if (enabled && !source) {
+            source = new ActivitySource(event => engine.handle(event));
+        } else if (!enabled && source) {
+            source.dispose();
+            source = undefined;
+        }
+    };
+
+    const syncCompanions = () => engine.setCompanions(manager.getAll());
+
+    engine.onDidChangeState(({ id, state }) => states.set(id, state));
+    syncCompanions();
+    syncSource();
+
+    context.subscriptions.push(
+        manager.onDidChange(syncCompanions),
+        states.onDidReportActivity(() => source?.reportActivity()),
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (!e.affectsConfiguration(BEHAVIOR_SECTION)) { return; }
+            const { config, errors } = getBehaviorConfig();
+            warnInvalidProfiles(errors);
+            enabled = config.enabled;
+            engine.updateConfig(config);
+            syncSource();
+        }),
+        vscode.commands.registerCommand('companion.toggleBehavior', async () => {
+            const settings = vscode.workspace.getConfiguration(BEHAVIOR_SECTION);
+            const next = !settings.get<boolean>('enabled', true);
+            await settings.update('enabled', next, vscode.ConfigurationTarget.Global);
+            vscode.window.showInformationMessage(`Companion reactions ${next ? 'on' : 'off'}`);
+        }),
+        { dispose: () => { source?.dispose(); engine.dispose(); } }
     );
 }
 
