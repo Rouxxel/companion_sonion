@@ -68,6 +68,10 @@
         "title": "Companion: Set State Asset"
       },
       {
+        "command": "companion.setBehaviorProfile",
+        "title": "Companion: Set Behavior Profile"
+      },
+      {
         "command": "companion.previewState",
         "title": "Companion: Preview State"
       },
@@ -118,12 +122,18 @@
           "order": 3,
           "description": "Typing speed (characters per second, averaged over 3 seconds) that makes companions excited. Pastes count as at most 20 characters. 0 disables."
         },
+        "companion.behavior.reactToErrors": {
+          "type": "boolean",
+          "default": true,
+          "order": 4,
+          "description": "React briefly when new errors appear in the active file (and, with the coder-pet profile, when they are all fixed)."
+        },
         "companion.behavior.reactionDurationMs": {
           "type": "number",
           "default": 3000,
           "minimum": 100,
           "order": 4,
-          "description": "How long short reactions last when a behavior rule doesn't set its own durationMs."
+          "description": "How long short reactions (such as reacting to errors) last when a behavior rule doesn't set its own durationMs."
         },
         "companion.behavior.defaultProfile": {
           "type": "string",

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { validateProfiles } from './profiles';
+import { BUILTIN_PROFILES, validateProfiles } from './profiles';
 import { BehaviorConfig, DEFAULT_BEHAVIOR_CONFIG } from './types';
 
 export const BEHAVIOR_SECTION = 'companion.behavior';
@@ -38,6 +38,23 @@ export function parseBehaviorConfig(read: (key: keyof BehaviorConfig) => unknown
 export function getBehaviorConfig(): ParsedBehaviorConfig {
     const settings = vscode.workspace.getConfiguration(BEHAVIOR_SECTION);
     return parseBehaviorConfig(key => settings.get(key));
+}
+
+export interface ProfileChoice {
+    name: string;
+    origin: 'built-in' | 'custom' | 'custom (replaces built-in)';
+}
+
+/** Profiles a companion can use: built-ins plus valid user profiles from settings. */
+export function listBehaviorProfiles(): { profiles: ProfileChoice[]; defaultProfile: string } {
+    const { config } = getBehaviorConfig();
+    const custom = new Set(config.profiles.map(p => p.name));
+    const builtin = new Set(BUILTIN_PROFILES.map(p => p.name));
+    const profiles: ProfileChoice[] = [
+        ...BUILTIN_PROFILES.map(p => ({ name: p.name, origin: custom.has(p.name) ? 'custom (replaces built-in)' as const : 'built-in' as const })),
+        ...config.profiles.filter(p => !builtin.has(p.name)).map(p => ({ name: p.name, origin: 'custom' as const }))
+    ];
+    return { profiles, defaultProfile: config.defaultProfile };
 }
 
 export function warnInvalidProfiles(errors: string[]) {

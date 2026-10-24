@@ -4,7 +4,7 @@ import { CompanionPanel } from './companion/CompanionPanel';
 import { CompanionManager } from './companion/CompanionManager';
 import { CompanionExplorerProvider } from './companion/CompanionExplorerProvider';
 import { DEFAULT_ASSET_URL, DEFAULT_SIZE } from './companion/constants';
-import { pickCompanion, promptPreviewState, promptSetStateAsset } from './companion/companionView';
+import { pickCompanion, promptPreviewState, promptSetBehaviorProfile, promptSetStateAsset } from './companion/companionView';
 import { RuntimeStates } from './companion/RuntimeStates';
 import { ActivitySource } from './behavior/ActivitySource';
 import { BehaviorEngine } from './behavior/BehaviorEngine';
@@ -114,6 +114,15 @@ export function activate(context: vscode.ExtensionContext) {
             const id = await pickCompanion(manager, 'Select companion');
             if (id) {
                 await promptSetStateAsset(manager, id);
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('companion.setBehaviorProfile', async () => {
+            const id = await pickCompanion(manager, 'Select companion');
+            if (id) {
+                await promptSetBehaviorProfile(manager, id);
             }
         })
     );

@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { ActivitySource, countTypedChars, isLikelyTyping } from '../behavior/ActivitySource';
+import { ActivitySource, countTypedChars, DIAGNOSTICS_DEBOUNCE_MS, errorTransition, isLikelyTyping } from '../behavior/ActivitySource';
 import { parseBehaviorConfig } from '../behavior/config';
 import { BehaviorConfig, BehaviorEvent, DEFAULT_BEHAVIOR_CONFIG } from '../behavior/types';
 
@@ -30,6 +30,25 @@ suite('isLikelyTyping / countTypedChars', () => {
 
 	test('counts inserted characters; deletions count as one', () => {
 		assert.strictEqual(countTypedChars([change(0, 0, 'abc'), change(1, 1, '', 4)]), 4);
+	});
+});
+
+suite('errorTransition', () => {
+	test('first sight of a file is a baseline, never a reaction', () => {
+		assert.strictEqual(errorTransition(undefined, 5), undefined);
+		assert.strictEqual(errorTransition(undefined, 0), undefined);
+	});
+
+	test('more errors → errorAppeared; down to zero → errorsCleared', () => {
+		assert.strictEqual(errorTransition(0, 1), 'errorAppeared');
+		assert.strictEqual(errorTransition(2, 3), 'errorAppeared');
+		assert.strictEqual(errorTransition(3, 0), 'errorsCleared');
+	});
+
+	test('fewer (but not zero) or unchanged errors → nothing', () => {
+		assert.strictEqual(errorTransition(3, 2), undefined);
+		assert.strictEqual(errorTransition(2, 2), undefined);
+		assert.strictEqual(errorTransition(0, 0), undefined);
 	});
 });
 
@@ -113,6 +132,53 @@ suite('ActivitySource (extension host)', () => {
 		await settle();
 
 		assert.deepStrictEqual(typingEvents(), []);
+	});
+
+	test('errors appearing / clearing in the active file are reported once, debounced', async function () {
+		this.timeout(10_000); // waits for three debounce periods
+		const diagnostics = vscode.languages.createDiagnosticCollection('companion-test');
+		try {
+			const doc = await vscode.workspace.openTextDocument({ content: 'one\ntwo\n', language: 'plaintext' });
+			await vscode.window.showTextDocument(doc);
+			await settle();
+			events = [];
+
+			const error = (line: number) => new vscode.Diagnostic(new vscode.Range(line, 0, line, 3), 'boom', vscode.DiagnosticSeverity.Error);
+			// A burst of publishes settles into one reaction
+			diagnostics.set(doc.uri, [error(0)]);
+			diagnostics.set(doc.uri, [error(0), error(1)]);
+			await new Promise(resolve => setTimeout(resolve, DIAGNOSTICS_DEBOUNCE_MS + 200));
+			assert.deepStrictEqual(events.filter(e => e.type === 'errorAppeared'), [{ type: 'errorAppeared', languageId: 'plaintext' }]);
+
+			// Warnings don't count
+			diagnostics.set(doc.uri, [error(0), error(1), new vscode.Diagnostic(new vscode.Range(0, 0, 0, 1), 'meh', vscode.DiagnosticSeverity.Warning)]);
+			await new Promise(resolve => setTimeout(resolve, DIAGNOSTICS_DEBOUNCE_MS + 200));
+			assert.strictEqual(events.filter(e => e.type === 'errorAppeared').length, 1);
+
+			diagnostics.set(doc.uri, []);
+			await new Promise(resolve => setTimeout(resolve, DIAGNOSTICS_DEBOUNCE_MS + 200));
+			assert.deepStrictEqual(events.filter(e => e.type === 'errorsCleared'), [{ type: 'errorsCleared', languageId: 'plaintext' }]);
+		} finally {
+			diagnostics.dispose();
+		}
+	});
+
+	test('switching to a file that already has errors does not react', async () => {
+		const diagnostics = vscode.languages.createDiagnosticCollection('companion-test');
+		try {
+			const first = await vscode.workspace.openTextDocument({ content: 'a' });
+			await vscode.window.showTextDocument(first);
+			const broken = await vscode.workspace.openTextDocument({ content: 'b' });
+			diagnostics.set(broken.uri, [new vscode.Diagnostic(new vscode.Range(0, 0, 0, 1), 'boom', vscode.DiagnosticSeverity.Error)]);
+			await new Promise(resolve => setTimeout(resolve, DIAGNOSTICS_DEBOUNCE_MS + 200));
+			events = [];
+
+			await vscode.window.showTextDocument(broken);
+			await new Promise(resolve => setTimeout(resolve, DIAGNOSTICS_DEBOUNCE_MS + 200));
+			assert.deepStrictEqual(events.filter(e => e.type === 'errorAppeared'), []);
+		} finally {
+			diagnostics.dispose();
+		}
 	});
 
 	test('undo is activity, not typing; activity is throttled', async () => {

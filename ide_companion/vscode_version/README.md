@@ -16,7 +16,7 @@ To generate .vsix locally navigate to the `ide_companion/vscode_version` folder 
 - **Lock/Unlock**: Prevent accidental movement by locking a companion (right-click context menu)
 - **Delete**: Double-click any companion to instantly remove it
 - **Custom Assets**: Change companion images via URL or import local files: images (PNG, JPG, GIF, WebP) or looping, muted videos (WebM, MP4)
-- **Reactions**: Companions react to you: they type along while you type, get excited when you type fast, fall asleep when you're away, and wake up when you're back
+- **Reactions**: Companions react to you: they type along while you type, get excited when you type fast, react to new errors, fall asleep when you're away, and wake up when you're back. Each companion can follow its own behavior profile
 - **State Assets**: Give a companion a different image or video for each animation state (typing, excited, reacting, sleeping); states without their own asset use a built-in animation of the main asset
 - **Smooth Updates**: Moving, resizing or changing one companion only updates that companion, so the other animations keep playing without restarting
 - **URL/Local Mode Toggle**: Switch between URL and local file modes in the sidebar with automatic disable logic
@@ -62,6 +62,7 @@ To generate .vsix locally navigate to the `ide_companion/vscode_version` folder 
      - **Change Asset URL**: Update the image URL
      - **Import Local Asset**: Select a local image file to use
      - **Set State Asset…**: Choose a state, then use a URL, import a local file, or clear it (see [Animation States](#animation-states))
+     - **Set Behavior Profile…**: Choose how this companion reacts (see [Reactions](#reactions))
      - **Clear current Asset (Switch to URL)**: Clear local file selection and switch to URL mode (only shown when local asset is active)
      - **Move to Explorer**: Move companion from Panel to Explorer mode (Panel only)
      - **Move to Panel**: Move companion from Explorer to Panel mode (Explorer only)
@@ -84,33 +85,36 @@ Companions switch states on their own based on what you do:
 | type in the active editor | `typing`, back to `idle` ~1.5 s after your last keystroke |
 | type fast (≥ 8 characters per second over 3 s) | `excited` |
 | do nothing for 2 minutes | `sleeping` |
+| introduce a new error in the active file | `reacting` for 3 s |
 | type, move the cursor, scroll, switch editors, focus the window, or hover a companion | wakes up |
 
 - Only your edits in the active editor count as typing. Output panels, git, other extensions editing files, Format Document, rename and undo/redo do not, and pastes count as at most 20 characters.
 - Turn reactions on or off with `Companion: Toggle Reactions` or the `companion.behavior.enabled` setting. When off, companions always show their main asset.
+- Error reactions only count **errors** (not warnings) in the file you're looking at, and only when their number goes up. Opening or switching to a file that already has errors doesn't trigger them. Turn them off with `companion.behavior.reactToErrors`.
 - Reactions don't change your saved companions: positions, profiles and exports are never touched while you type.
-- Tune timings in the settings below, or pick a behavior profile with `companion.behavior.defaultProfile`:
-  - `default`: typing, excited and sleeping as described above
+- Tune timings in the settings below, and choose how companions behave with a **behavior profile**:
+  - `default`: typing, excited, sleeping and error reactions as described above
   - `calm`: only falls asleep
-  - `coder-pet`: like `default` (also reacts to errors once that is available)
+  - `coder-pet`: like `default`, and gets excited for 2 s when you fix the last error in a file
   - `none`: no reactions
-- You can also write your own profiles in `companion.behavior.profiles`. Each rule maps an event to a state, optionally only for some languages:
+- Every companion uses `companion.behavior.defaultProfile` unless you give it its own: right-click → **Set Behavior Profile…**, or run `Companion: Set Behavior Profile`. The choice is saved with the companion (and in profiles and exports). If the profile is later removed, the companion falls back to the default.
+- You can also write your own profiles in `companion.behavior.profiles`. Each rule maps an event to a state, optionally only for some languages. For example, a companion that only reacts while you work in TypeScript or Python:
 
 ```json
 "companion.behavior.profiles": [
   {
-    "name": "python-buddy",
+    "name": "ts-py-buddy",
     "rules": [
-      { "on": "typing", "state": "excited", "when": { "languageId": ["python"] } },
-      { "on": "typing", "state": "typing" },
+      { "on": "rapidTyping", "state": "excited", "when": { "languageId": ["typescript", "python"] } },
+      { "on": "typing", "state": "typing", "when": { "languageId": ["typescript", "python"] } },
+      { "on": "errorAppeared", "state": "reacting", "when": { "languageId": ["typescript", "python"] } },
       { "on": "inactive", "state": "sleeping" }
     ]
   }
-],
-"companion.behavior.defaultProfile": "python-buddy"
+]
 ```
 
-  Events `typing`, `rapidTyping` and `inactive` hold their state while they last. Events `activity` and `typingStopped` show their state briefly (`durationMs`, default `companion.behavior.reactionDurationMs`), and only if it outranks the current one (`reacting` > `excited` > `typing` > `idle` > `sleeping`). Invalid profiles are skipped with a warning.
+  Events `typing`, `rapidTyping` and `inactive` hold their state while they last. Events `activity`, `typingStopped`, `errorAppeared` and `errorsCleared` show their state briefly (`durationMs`, default `companion.behavior.reactionDurationMs`), and only if it outranks the current one (`reacting` > `excited` > `typing` > `idle` > `sleeping`). Invalid profiles are skipped with a warning.
 
 ### Mode Switching
 
@@ -152,7 +156,8 @@ This extension contributes the following settings:
 | `companion.behavior.sleepAfterSeconds` | `120` | Seconds without activity before companions fall asleep (min 10) |
 | `companion.behavior.typingCooldownMs` | `1500` | Milliseconds after the last keystroke before the typing state ends (min 200) |
 | `companion.behavior.excitedCharsPerSecond` | `8` | Typing speed that makes companions excited; `0` disables |
-| `companion.behavior.reactionDurationMs` | `3000` | Default length of short reactions in behavior profiles |
+| `companion.behavior.reactToErrors` | `true` | React when new errors appear in the active file |
+| `companion.behavior.reactionDurationMs` | `3000` | Default length of short reactions (e.g. reacting to errors) |
 | `companion.behavior.defaultProfile` | `"default"` | Behavior profile: `default`, `calm`, `coder-pet`, `none`, or one of your own |
 | `companion.behavior.profiles` | `[]` | Your own behavior profiles (see [Reactions](#reactions)) |
 | `companion.behavior.cssAnimations` | `true` | Play built-in animations for states that have no asset of their own |
@@ -164,6 +169,7 @@ This extension contributes the following commands:
 - `companion.moveToExplorer`: Move a Panel companion to Explorer mode
 - `companion.moveToPanel`: Move an Explorer companion to Panel mode
 - `companion.toggleBehavior`: Turn companion reactions on or off
+- `companion.setBehaviorProfile`: Choose the behavior profile of a companion
 - `companion.setStateAsset`: Set or clear the asset a companion shows in a given animation state
 - `companion.previewState`: Temporarily show a companion in a given animation state
 - `companion.saveProfile`: Save current companions as a named profile

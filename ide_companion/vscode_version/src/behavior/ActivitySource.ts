@@ -29,17 +29,43 @@ export function countTypedChars(changes: readonly Change[]): number {
     return changes.reduce((sum, c) => sum + Math.max(c.text.length, c.rangeLength > 0 ? 1 : 0), 0);
 }
 
+/** Language servers publish diagnostics in bursts; wait this long for them to settle. */
+export const DIAGNOSTICS_DEBOUNCE_MS = 500;
+
+/**
+ * Error reaction for one file, given the previous and current error count.
+ * `previous` undefined = first time this file is seen (baseline, no reaction),
+ * so opening a file that already has errors does not trigger a reaction.
+ */
+export function errorTransition(previous: number | undefined, current: number): 'errorAppeared' | 'errorsCleared' | undefined {
+    if (previous === undefined) { return undefined; }
+    if (current > previous) { return 'errorAppeared'; }
+    if (current === 0 && previous > 0) { return 'errorsCleared'; }
+    return undefined;
+}
+
 /**
  * Translates VS Code events into BehaviorEvents. Only user-like edits in the
  * active editor count as typing; selection, scrolling, editor switches,
- * window focus/activity and webview interactions count as activity.
+ * window focus/activity and webview interactions count as activity; error
+ * diagnostics of the active file trigger error reactions.
  */
 export class ActivitySource implements vscode.Disposable {
     private disposables: vscode.Disposable[] = [];
     private lastActivity = -Infinity;
+    private errorCounts = new Map<string, number>();
+    private diagnosticsTimer?: ReturnType<typeof setTimeout>;
 
     constructor(private readonly emit: (event: BehaviorEvent) => void, private readonly now: () => number = Date.now) {
+        this.recordErrorBaseline();
         this.disposables.push(
+            vscode.languages.onDidChangeDiagnostics(e => {
+                const active = vscode.window.activeTextEditor?.document.uri.toString();
+                if (active && e.uris.some(uri => uri.toString() === active)) {
+                    this.scheduleErrorCheck();
+                }
+            }),
+            vscode.workspace.onDidCloseTextDocument(doc => this.errorCounts.delete(doc.uri.toString())),
             vscode.workspace.onDidChangeTextDocument(e => this.onDocumentChange(e)),
             vscode.window.onDidChangeTextEditorSelection(e => {
                 if (e.kind === vscode.TextEditorSelectionChangeKind.Keyboard || e.kind === vscode.TextEditorSelectionChangeKind.Mouse) {
@@ -51,7 +77,10 @@ export class ActivitySource implements vscode.Disposable {
                     this.reportActivity();
                 }
             }),
-            vscode.window.onDidChangeActiveTextEditor(() => this.reportActivity()),
+            vscode.window.onDidChangeActiveTextEditor(() => {
+                this.recordErrorBaseline();
+                this.reportActivity();
+            }),
             vscode.window.onDidChangeWindowState(state => {
                 if (state.focused || state.active) {
                     this.reportActivity();
@@ -83,7 +112,42 @@ export class ActivitySource implements vscode.Disposable {
         this.emit({ type: 'typing', chars: countTypedChars(e.contentChanges), languageId: e.document.languageId });
     }
 
+    private activeErrorCount(): { key: string; count: number; languageId: string } | undefined {
+        const doc = vscode.window.activeTextEditor?.document;
+        if (!doc) { return undefined; }
+        const count = vscode.languages.getDiagnostics(doc.uri).filter(d => d.severity === vscode.DiagnosticSeverity.Error).length;
+        return { key: doc.uri.toString(), count, languageId: doc.languageId };
+    }
+
+    /** Remember the active file's current error count without reacting (first sight only). */
+    private recordErrorBaseline() {
+        const active = this.activeErrorCount();
+        if (active && !this.errorCounts.has(active.key)) {
+            this.errorCounts.set(active.key, active.count);
+        }
+    }
+
+    private scheduleErrorCheck() {
+        if (this.diagnosticsTimer) {
+            clearTimeout(this.diagnosticsTimer);
+        }
+        this.diagnosticsTimer = setTimeout(() => {
+            this.diagnosticsTimer = undefined;
+            const active = this.activeErrorCount();
+            if (!active) { return; }
+            const type = errorTransition(this.errorCounts.get(active.key), active.count);
+            this.errorCounts.set(active.key, active.count);
+            if (type) {
+                this.emit({ type, languageId: active.languageId });
+            }
+        }, DIAGNOSTICS_DEBOUNCE_MS);
+    }
+
     dispose() {
+        if (this.diagnosticsTimer) {
+            clearTimeout(this.diagnosticsTimer);
+            this.diagnosticsTimer = undefined;
+        }
         this.disposables.forEach(d => d.dispose());
         this.disposables = [];
     }

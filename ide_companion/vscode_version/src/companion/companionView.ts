@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { AssetKind, CompanionChange, CompanionState, ENGINE_STATES, RenderCompanion, ResolvedAsset, STATE_ASSET_STATES, StateAssetState } from './Companion';
 import { CompanionManager } from './CompanionManager';
 import { RuntimeStates } from './RuntimeStates';
+import { listBehaviorProfiles } from '../behavior/config';
 import { ASSET_FILE_FILTERS, DEFAULT_ASSET_URL, RenderMode, VIDEO_EXTENSIONS } from './constants';
 
 /**
@@ -190,6 +191,27 @@ export async function promptSetStateAsset(manager: CompanionManager, id: string)
     manager.update(id, { stateAssets: Object.keys(stateAssets).length > 0 ? stateAssets : undefined });
 }
 
+/** Choose which behavior profile a companion follows (saved with the companion). */
+export async function promptSetBehaviorProfile(manager: CompanionManager, id: string) {
+    const companion = manager.get(id);
+    if (!companion) { return; }
+
+    const { profiles, defaultProfile } = listBehaviorProfiles();
+    const current = companion.behaviorProfile;
+    const useDefault = `Use default (${defaultProfile})`;
+    const items: vscode.QuickPickItem[] = [
+        { label: useDefault, description: current === undefined ? 'current' : undefined },
+        ...profiles.map(p => ({ label: p.name, description: p.name === current ? `${p.origin} · current` : p.origin }))
+    ];
+    if (current !== undefined && !profiles.some(p => p.name === current)) {
+        items.push({ label: current, description: `missing, using ${defaultProfile} · current` });
+    }
+
+    const pick = await vscode.window.showQuickPick(items, { placeHolder: 'Behavior profile for this companion' });
+    if (!pick) { return; }
+    manager.update(id, { behaviorProfile: pick.label === useDefault ? undefined : pick.label });
+}
+
 /** Temporarily show a companion in a given state (runtime only, not saved). */
 export async function promptPreviewState(states: RuntimeStates, id: string) {
     const pick = await vscode.window.showQuickPick(
@@ -216,7 +238,8 @@ async function showCompanionContextMenu(
     const clearLabel = 'Clear current Asset (Switch to URL)';
 
     const stateAssetLabel = 'Set State Asset…';
-    const choices = ['Toggle Lock', 'Delete', 'Change Asset URL', 'Import Local Asset', stateAssetLabel, moveLabel];
+    const profileLabel = 'Set Behavior Profile…';
+    const choices = ['Toggle Lock', 'Delete', 'Change Asset URL', 'Import Local Asset', stateAssetLabel, profileLabel, moveLabel];
     if (local) {
         choices.push(clearLabel);
     }
@@ -247,6 +270,9 @@ async function showCompanionContextMenu(
         }
         case stateAssetLabel:
             await promptSetStateAsset(manager, id);
+            break;
+        case profileLabel:
+            await promptSetBehaviorProfile(manager, id);
             break;
         case moveLabel:
             manager.moveToMode(id, target);
