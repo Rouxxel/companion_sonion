@@ -1,16 +1,17 @@
 import * as vscode from 'vscode';
 import { CompanionManager } from './CompanionManager';
-import { Companion } from './Companion';
 import { getCompanionHtml } from './companionHtml';
 import { CompanionPanel } from './CompanionPanel';
+import { getRenderCompanions, handleWebviewMessage } from './companionView';
 
 /**
  * Renders companions inside the VS Code Explorer sidebar
  * using a WebviewViewProvider.
  */
-export class CompanionExplorerProvider implements vscode.WebviewViewProvider {
+export class CompanionExplorerProvider implements vscode.WebviewViewProvider, vscode.Disposable {
 
     private webviewView?: vscode.WebviewView;
+    private viewDisposables: vscode.Disposable[] = [];
 
     constructor(
         private readonly extensionUri: vscode.Uri,
@@ -18,6 +19,7 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider {
     ) {}
 
     resolveWebviewView(webviewView: vscode.WebviewView) {
+        this.disposeView();
         this.webviewView = webviewView;
 
         const localAssetStorageUri = this.manager.getLocalAssetStorageUri();
@@ -31,135 +33,55 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.html = getCompanionHtml('explorer');
 
-        // Subscribe to manager changes and push updated companion list
-        this.manager.onDidChange(() => {
-            this.postRender();
-        });
-
-        // Re-render when the view becomes visible (e.g., when user opens Explorer sidebar)
-        webviewView.onDidChangeVisibility(() => {
-            if (webviewView.visible) {
+        this.viewDisposables.push(
+            // Subscribe to manager changes and push updated companion list
+            this.manager.onDidChange(() => {
                 this.postRender();
-            }
-        });
+            }),
 
-        // Handle messages from the webview
-        webviewView.webview.onDidReceiveMessage(async (msg) => {
-            if (msg.command === 'savePosition') {
-                this.manager.update(msg.id, {
-                    x: msg.x,
-                    y: msg.y
-                });
-            }
-
-            if (msg.command === 'resize') {
-                this.manager.update(msg.id, {
-                    size: msg.size
-                });
-            }
-
-            if (msg.command === 'contextMenu') {
-                const id = msg.id;
-                const companion = this.manager.get(id);
-                if (!companion) { return; }
-
-                const isLocalAsset = typeof companion.assetPath === 'string' && companion.assetPath.startsWith('local:');
-
-                const choices = [
-                    'Toggle Lock',
-                    'Delete',
-                    'Change Asset URL',
-                    'Import Local Asset',
-                    'Move to Panel'
-                ];
-
-                if (isLocalAsset) {
-                    choices.push('Clear current Asset (Switch to URL)');
+            // Re-render when the view becomes visible (e.g., when user opens Explorer sidebar)
+            webviewView.onDidChangeVisibility(() => {
+                if (webviewView.visible) {
+                    this.postRender();
                 }
+            }),
 
-                const choice = await vscode.window.showQuickPick(choices, { placeHolder: 'Companion actions' });
-
-                if (!choice) { return; }
-
-                if (choice === 'Toggle Lock') {
-                    this.manager.update(id, { locked: !companion.locked });
+            // Handle messages from the webview
+            webviewView.webview.onDidReceiveMessage(msg => handleWebviewMessage(this.manager, msg, 'explorer', target => {
+                // Open the panel if it's not already open
+                if (target === 'panel') {
+                    CompanionPanel.createOrShow(this.extensionUri, this.manager);
                 }
+            })),
 
-                if (choice === 'Delete') {
-                    this.manager.delete(id);
+            webviewView.onDidDispose(() => {
+                if (this.webviewView === webviewView) {
+                    this.disposeView();
                 }
-
-                if (choice === 'Change Asset URL') {
-                    const url = await vscode.window.showInputBox({ prompt: 'Enter new asset URL', value: isLocalAsset ? '' : companion.assetPath });
-                    if (url) {
-                        this.manager.update(id, { assetPath: url });
-                    }
-                }
-
-                if (choice === 'Import Local Asset') {
-                    const uris = await vscode.window.showOpenDialog({ canSelectMany: false, filters: { Images: ['png','jpg','jpeg','gif','webm'] } });
-                    if (!uris || uris.length === 0) { return; }
-                    const marker = await this.manager.importLocalAsset(uris[0]);
-                    if (marker) {
-                        this.manager.update(id, { assetPath: marker });
-                    }
-                }
-
-                if (choice === 'Clear current Asset (Switch to URL)') {
-                    const url = await vscode.window.showInputBox({ prompt: 'Enter new asset URL' });
-                    if (url) {
-                        this.manager.update(id, { assetPath: url });
-                    }
-                }
-
-                if (choice === 'Move to Panel') {
-                    this.manager.moveToMode(id, 'panel');
-                    // Open the panel if it's not already open
-                    let panel = CompanionPanel.currentPanel;
-                    if (!panel) {
-                        panel = new CompanionPanel(this.extensionUri, this.manager);
-                    }
-                    panel.show();
-                }
-            }
-
-            if (msg.command === 'delete') {
-                this.manager.delete(msg.id);
-            }
-        });
+            })
+        );
 
         // Initial render
         this.postRender();
     }
 
     private async postRender() {
-        if (!this.webviewView) { return; }
+        const view = this.webviewView;
+        if (!view) { return; }
 
-        const comps: Companion[] = this.manager.getAllForMode('explorer').map((c: Companion) => ({ ...c }));
+        const comps = await getRenderCompanions(this.manager, view.webview, 'explorer');
+        if (this.webviewView !== view) { return; }
 
-        // Resolve local assets to webview URIs
-        for (const c of comps) {
-            if (typeof c.assetPath === 'string' && c.assetPath.startsWith('local:')) {
-                const fsUri = this.manager.getLocalAssetFsPath(c.assetPath);
-                if (fsUri) {
-                    try {
-                        try {
-                            await vscode.workspace.fs.stat(fsUri);
-                            c.assetPath = this.webviewView.webview.asWebviewUri(fsUri).toString();
-                        } catch (statError) {
-                            console.error(`Local asset not found: ${fsUri.toString()}`, statError);
-                            c.assetPath = 'https://c.tenor.com/Wqi3Xrnz2wwAAAAd/tenor.gif';
-                        }
-                    } catch (e) {
-                        console.error('Failed to convert local asset to webview URI:', e);
-                    }
-                } else {
-                    console.error(`Could not resolve local asset path for: ${c.assetPath}`);
-                    c.assetPath = 'https://c.tenor.com/Wqi3Xrnz2wwAAAAd/tenor.gif';
-                }
-            }
-        }
+        view.webview.postMessage({ command: 'render', companions: comps });
+    }
 
-        this.webviewView.webview.postMessage({ command: 'render', companions: comps });
+    private disposeView() {
+        this.viewDisposables.forEach(d => d.dispose());
+        this.viewDisposables = [];
+        this.webviewView = undefined;
+    }
+
+    dispose() {
+        this.disposeView();
     }
 }

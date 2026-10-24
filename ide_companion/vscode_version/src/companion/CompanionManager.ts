@@ -21,7 +21,7 @@ export class CompanionManager {
     }
 
     private async save() {
-        if (!this.storage) return;
+        if (!this.storage) { return; }
         await this.storage.update(STORAGE_KEY, Array.from(this.companions.values()));
         this._onDidChange.fire();
         console.log("[save] Saved companion");
@@ -35,7 +35,7 @@ export class CompanionManager {
 
     update(id: string, data: Partial<Companion>) {
         const c = this.companions.get(id);
-        if (!c) return;
+        if (!c) { return; }
 
         this.companions.set(id, { ...c, ...data });
         this.save();
@@ -70,23 +70,23 @@ export class CompanionManager {
 
     // Profiles
     async saveProfile(name: string) {
-        if (!this.storage) return;
+        if (!this.storage) { return; }
         const profiles = this.storage.get<Record<string, Companion[]>>(PROFILES_KEY, {});
         profiles[name] = this.getAll();
         await this.storage.update(PROFILES_KEY, profiles);
     }
 
     listProfiles(): string[] {
-        if (!this.storage) return [];
+        if (!this.storage) { return []; }
         const profiles = this.storage.get<Record<string, Companion[]>>(PROFILES_KEY, {});
         return Object.keys(profiles);
     }
 
     async loadProfile(name: string) {
-        if (!this.storage) return;
+        if (!this.storage) { return; }
         const profiles = this.storage.get<Record<string, Companion[]>>(PROFILES_KEY, {});
         const arr = profiles[name];
-        if (!arr) return;
+        if (!arr) { return; }
         this.companions.clear();
         arr.forEach(c => this.companions.set(c.id, c));
         await this.save();
@@ -94,7 +94,7 @@ export class CompanionManager {
     }
 
     async deleteProfile(name: string) {
-        if (!this.storage) return;
+        if (!this.storage) { return; }
         const profiles = this.storage.get<Record<string, Companion[]>>(PROFILES_KEY, {});
         delete profiles[name];
         await this.storage.update(PROFILES_KEY, profiles);
@@ -122,7 +122,7 @@ export class CompanionManager {
 
     // Local asset import (copy into extension storage)
     async importLocalAsset(source: vscode.Uri): Promise<string | undefined> {
-        if (!this.storageUri) return undefined;
+        if (!this.storageUri) { return undefined; }
 
         const extIndex = source.path.lastIndexOf('.');
         const ext = extIndex !== -1 ? source.path.substring(extIndex) : '';
@@ -138,7 +138,7 @@ export class CompanionManager {
     }
 
     getLocalAssetFsPath(marker: string): vscode.Uri | undefined {
-        if (!marker || !marker.startsWith('local:') || !this.storageUri) return undefined;
+        if (!marker || !marker.startsWith('local:') || !this.storageUri) { return undefined; }
         const filename = marker.substring('local:'.length);
         console.log("[getLocalAssetFsPath] Getting local asset fs path");
         return vscode.Uri.joinPath(this.storageUri, filename);

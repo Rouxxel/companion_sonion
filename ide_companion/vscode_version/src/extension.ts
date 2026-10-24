@@ -3,6 +3,7 @@ import { SidebarProvider } from './sidebar/SidebarProvider';
 import { CompanionPanel } from './companion/CompanionPanel';
 import { CompanionManager } from './companion/CompanionManager';
 import { CompanionExplorerProvider } from './companion/CompanionExplorerProvider';
+import { DEFAULT_ASSET_URL, DEFAULT_SIZE } from './companion/constants';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -21,6 +22,7 @@ export function activate(context: vscode.ExtensionContext) {
     // EXPLORER SIDEBAR PROVIDER
     const explorerProvider = new CompanionExplorerProvider(context.extensionUri, manager);
     context.subscriptions.push(
+        explorerProvider,
         vscode.window.registerWebviewViewProvider(
             'companionExplorer',
             explorerProvider
@@ -31,12 +33,10 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('companion.spawn', async (options?: { assetPath?: string; localAssetUri?: string; size?: number; x?: number; y?: number; renderMode?: 'panel' | 'explorer' }) => {
 
-            const defaultAssetPath = "https://c.tenor.com/Wqi3Xrnz2wwAAAAd/tenor.gif";
-            const defaultSize = 180;
             const defaultX = 0.5; // center (50%)
             const defaultY = 0.5; // center (50%)
 
-            let assetPath = options?.assetPath || defaultAssetPath;
+            let assetPath = options?.assetPath || DEFAULT_ASSET_URL;
 
             if (options?.localAssetUri) {
                 const marker = await manager.importLocalAsset(vscode.Uri.file(options.localAssetUri));
@@ -51,7 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
                 id: Date.now().toString(),
                 x: options?.x ?? defaultX,
                 y: options?.y ?? defaultY,
-                size: options?.size ?? defaultSize,
+                size: options?.size ?? DEFAULT_SIZE,
                 assetPath: assetPath,
                 locked: false,
                 renderMode: renderMode
@@ -59,11 +59,7 @@ export function activate(context: vscode.ExtensionContext) {
 
             // Only open panel if spawning in panel mode
             if (renderMode === 'panel') {
-                let panel = CompanionPanel.currentPanel;
-                if (!panel) {
-                    panel = new CompanionPanel(context.extensionUri, manager);
-                }
-                panel.show();
+                CompanionPanel.createOrShow(context.extensionUri, manager);
             }
         })
     );

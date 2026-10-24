@@ -2,9 +2,9 @@
 
 A VS Code extension that brings animated companions into your editor. Spawn, customize, and manage multiple GIF/PNG/WebM companions that persist across sessions.
 
-To generate .vsix locally navigate to companion_sonion folder and run `vsce package` (requirements are `npm install -g @vscode/vsce` and Node.js of course). Then within VSCode Ctrl + Shift + X (Extensions view) and click the gear icon and "Install from VSIX..." to install the generated .vsix file, then reload vscode window.
+To generate .vsix locally navigate to the `ide_companion/vscode_version` folder and run `vsce package` (requirements are `npm install -g @vscode/vsce` and Node.js of course). Then within VSCode Ctrl + Shift + X (Extensions view) and click the gear icon and "Install from VSIX..." to install the generated .vsix file, then reload vscode window.
 
-![Sonion](https://github.com/Rouxxel/companion_sonion/blob/main/ide_companion/companion_sonion/media/sonion.jpeg?raw=true)
+![Sonion](https://github.com/Rouxxel/companion_sonion/blob/main/ide_companion/vscode_version/media/sonion.jpeg?raw=true)
 
 ## Features
 
@@ -15,7 +15,7 @@ To generate .vsix locally navigate to companion_sonion folder and run `vsce pack
 - **Hover Effect**: Companions fade to 30% opacity when you hover over them, with cursor changing to a grab hand
 - **Lock/Unlock**: Prevent accidental movement by locking a companion (right-click context menu)
 - **Delete**: Double-click any companion to instantly remove it
-- **Custom Assets**: Change companion images via URL or import local image files (PNG, JPG, GIF, WebM)
+- **Custom Assets**: Change companion images via URL or import local image files (PNG, JPG, GIF, WebP)
 - **URL/Local Mode Toggle**: Switch between URL and local file modes in the sidebar with automatic disable logic
 - **Clear current Asset**: Option to clear local file selection and switch back to URL mode
 - **Relative Positioning**: Companions use percentage-based positioning (0-1) relative to window size for consistent placement across different screen sizes
@@ -105,7 +105,7 @@ This extension contributes the following commands:
 
 ## Known Issues
 
-- Companions reset on extension reload (use profiles to save state)
+- The Panel is not reopened automatically after a window reload; your companions are kept and reappear when you spawn a companion or open the panel again
 - Large images or high refresh rates may impact performance
 - Explorer mode companions are constrained to the sidebar viewport and cannot overlay native Explorer content
 

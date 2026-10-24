@@ -44,10 +44,6 @@
   "contributes": {
     "commands": [
       {
-        "command": "companion.helloWorld",
-        "title": "Your companion is here!"
-      },
-      {
         "command": "companion.spawn",
         "title": "Spawn Companion"
       },

@@ -1,11 +1,14 @@
+import { RenderMode, SIZE_LIMITS, SIZE_STEP } from './constants';
+
 /**
  * Shared companion renderer.
  * Both the WebviewPanel (panel mode) and the Explorer WebviewViewProvider
  * (explorer mode) use this function to produce the HTML that renders
  * companions inside their respective webview containers.
  */
-export function getCompanionHtml(mode: 'panel' | 'explorer'): string {
+export function getCompanionHtml(mode: RenderMode): string {
     const isExplorer = mode === 'explorer';
+    const limits = SIZE_LIMITS[mode];
 
     return `
     <!DOCTYPE html>
@@ -154,10 +157,7 @@ export function getCompanionHtml(mode: 'panel' | 'explorer'): string {
                     img.addEventListener('wheel', (e) => {
                         e.preventDefault();
 
-                        ${isExplorer
-                            ? `const size = Math.max(30, Math.min(200, c.size + (e.deltaY < 0 ? 10 : -10)));`
-                            : `const size = Math.max(40, c.size + (e.deltaY < 0 ? 10 : -10));`
-                        }
+                        const size = Math.max(${limits.min}, Math.min(${limits.max}, c.size + (e.deltaY < 0 ? ${SIZE_STEP} : -${SIZE_STEP})));
 
                         vscode.postMessage({
                             command: 'resize',
