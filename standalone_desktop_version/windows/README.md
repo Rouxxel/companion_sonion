@@ -2,11 +2,11 @@
 
 A minimalist, borderless floating companion player. Each companion is a transparent, frameless window that can display PNG, JPEG, GIF, WebP, BMP, SVG, or WebM assets. Companions stay on top of other windows and disappear from the taskbar.
 
-## Run
+## Install
 
-### Installed app (recommended)
+### Installer (recommended)
 
-Build a Windows installer once:
+Build the Windows installer:
 
 ```powershell
 cd standalone_desktop_version/windows
@@ -14,15 +14,25 @@ npm install
 npm run package
 ```
 
-After it finishes, run the installer from `release/Sonion Companion Setup 0.1.0.exe`. The installer adds a **Start menu** and optional **desktop shortcut**. Pin that shortcut to your taskbar to launch the app like any other program.
+This creates `release/SonionCompanion-Setup-<version>.exe` (for example `SonionCompanion-Setup-0.2.0.exe`). Run it and follow the steps:
 
-When running, Sonion Companion lives in the **system tray** (near the clock). Right-click the tray icon for Add companion, Settings, or Quit.
+- It installs **for your user only**, so no administrator rights are needed. The default folder is `%LOCALAPPDATA%\Programs\Sonion Companion`, and you can choose another one.
+- It adds a **Start menu** entry and a **desktop shortcut**, and lists the app under **Settings → Apps → Installed apps**.
+- **Windows SmartScreen** may show "Windows protected your PC", because the installer isn't code-signed. Click **More info → Run anyway**.
 
-Only one copy runs at a time. Launching it again (Start menu, desktop shortcut or a pinned taskbar icon) while it's already running opens the **Settings** window of the running copy instead of starting a second one. The first time you open it with no companions saved, Settings opens automatically.
+**Pin to the taskbar:** open the Start menu, right-click **Sonion Companion** → **Pin to taskbar** (Windows doesn't let installers pin apps themselves). Clicking the pin while the app runs opens its Settings window.
 
-### Development
+**Start with Windows:** the installed app starts automatically when you sign in to Windows. It turns this on the first time you open it. To turn it off, uncheck **Start with Windows** in the tray menu, or disable it in **Task Manager → Startup apps**. Your choice is kept: the app never turns it back on by itself.
 
-See [Development](#development) below.
+**Updating:** run a newer installer over the existing installation. Your companions, layouts and the Start with Windows choice are kept.
+
+### Uninstall
+
+Use **Settings → Apps → Installed apps → Sonion Companion → Uninstall** (or *Uninstall Sonion Companion* in the install folder).
+
+- It removes the program, its shortcuts, its Installed apps entry and the Start with Windows entry.
+- It then asks **"Also delete your companions, layouts and cached assets?"**. The default is **No**, which keeps `%APPDATA%\Sonion Companion` for a future reinstall.
+- Silent uninstalls (`"Uninstall Sonion Companion.exe" /S`) always keep that data.
 
 ### Portable `.exe` (no installer)
 
@@ -30,7 +40,15 @@ See [Development](#development) below.
 npm run package:portable
 ```
 
-This creates `release/Sonion Companion 0.1.0.exe` — a single portable executable you can move anywhere and double-click to run.
+This creates `release/SonionCompanion-Portable-<version>.exe`, a single executable you can move anywhere and double-click to run. It doesn't start with Windows unless you turn that on in the tray menu; if you move the file afterwards, turn it on again.
+
+## Run
+
+When running, Sonion Companion lives in the **system tray** (near the clock). Right-click the tray icon for Add companion, Settings, Start with Windows, or Quit.
+
+Only one copy runs at a time. Launching it again (Start menu, desktop shortcut or a pinned taskbar icon) while it's already running opens the **Settings** window of the running copy instead of starting a second one. The first time you open it with no companions saved, Settings opens automatically (but not when Windows starts it at sign-in).
+
+For running from source, see [Development](#development).
 
 ## Features
 
@@ -91,6 +109,7 @@ This creates `release/Sonion Companion 0.1.0.exe` — a single portable executab
 
 - **Add companion** — spawn a new companion
 - **Settings** — open the settings window
+- **Start with Windows** — start automatically when you sign in (installed and portable app only; not available when running from source)
 - **Quit** — exit the application
 
 ## Settings
@@ -146,6 +165,13 @@ Everything the build needs lives in this folder:
 - `resources/build/icon.ico` — app/installer icon (16–256 px)
 
 If `npm start` fails with `Cannot read properties of undefined (reading 'getPath')`, the environment variable `ELECTRON_RUN_AS_NODE` is set (some editors set it for their terminals); clear it with `Remove-Item Env:ELECTRON_RUN_AS_NODE` and try again.
+
+If `npm run package` fails with `…__uninstaller.exe" -> no files found`, Windows Security's **Controlled folder access** (ransomware protection) blocked the installer build from writing into a protected folder such as Documents. You'll see a matching "blocked" notification in Windows Security. Either allow it there (Windows Security → Virus & threat protection → Ransomware protection → Allow an app through Controlled folder access), or build into an unprotected folder:
+
+```powershell
+npm run build
+npx electron-builder --win nsis "-c.directories.output=$env:LOCALAPPDATA\SonionCompanion-build"
+```
 
 ## Known Limitations
 

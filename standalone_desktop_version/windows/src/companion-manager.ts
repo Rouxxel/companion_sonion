@@ -37,6 +37,10 @@ export interface CompanionSettings {
   maxCompanions: number;
   /** System-wide shortcuts; defaults avoid common app shortcuts such as Ctrl+Shift+S (Save As). */
   shortcuts: ShortcutSettings;
+  /** Mirrors Windows' login-item state for this app (Windows is the source of truth). */
+  startWithWindows: boolean;
+  /** Internal: the installed app already turned "Start with Windows" on once, so a later "off" is never overridden. */
+  autostartInitialized: boolean;
 }
 
 export interface CompanionProfile {
@@ -70,7 +74,9 @@ export const DEFAULT_SETTINGS: Readonly<CompanionSettings> = Object.freeze({
   maxSize: 500,
   hoverOpacity: 0.3,
   maxCompanions: 25,
-  shortcuts: DEFAULT_SHORTCUTS
+  shortcuts: DEFAULT_SHORTCUTS,
+  startWithWindows: true,
+  autostartInitialized: false
 });
 
 function clone<T>(value: T): T {
@@ -113,7 +119,9 @@ function normalizeSettings(value: unknown): CompanionSettings {
     maxSize,
     hoverOpacity: numberInRange(source.hoverOpacity, DEFAULT_SETTINGS.hoverOpacity, 0.05, 1),
     maxCompanions: Math.round(numberInRange(source.maxCompanions, DEFAULT_SETTINGS.maxCompanions, 1, 100)),
-    shortcuts: normalizeShortcuts(source.shortcuts)
+    shortcuts: normalizeShortcuts(source.shortcuts),
+    startWithWindows: typeof source.startWithWindows === "boolean" ? source.startWithWindows : DEFAULT_SETTINGS.startWithWindows,
+    autostartInitialized: source.autostartInitialized === true
   };
 }
 
@@ -249,7 +257,9 @@ export class CompanionManager {
     const profileName = this.assertProfileName(name);
     const profile = this.config.profiles[profileName];
     if (!profile) throw new Error(`Unknown profile: ${profileName}`);
-    this.config.settings = clone(profile.settings);
+    // Layouts restore companions and display settings, not machine-level preferences.
+    const { shortcuts, startWithWindows, autostartInitialized } = this.config.settings;
+    this.config.settings = { ...clone(profile.settings), shortcuts, startWithWindows, autostartInitialized };
     this.config.companions = clone(profile.companions);
     this.save();
     return this.snapshot();

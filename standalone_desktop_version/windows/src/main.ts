@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { APP_ID, launchedAtLogin, PRODUCT_NAME } from "./app-identity";
+import { autostartAvailable, initializeAutostart, setStartWithWindows } from "./autostart";
 import { Companion, CompanionManager, CompanionSettings, ShortcutSettings } from "./companion-manager";
 
 type PointDelta = { x: number; y: number };
@@ -250,16 +251,35 @@ function applyShortcuts(shortcuts: ShortcutSettings): void {
   }
 }
 
-function createTray(): void {
-  const icon = nativeImage.createFromPath(path.join(__dirname, "assets", "tray-icon.png")).resize({ width: 16, height: 16 });
-  tray = new Tray(icon);
-  tray.setToolTip(PRODUCT_NAME);
+/** Turns "Start with Windows" on/off and stores what Windows actually reports. */
+function updateStartWithWindows(enabled: boolean): boolean {
+  const actual = setStartWithWindows(enabled);
+  manager.updateSettings({ startWithWindows: actual });
+  refreshTrayMenu();
+  return actual;
+}
+
+function refreshTrayMenu(): void {
+  if (!tray) return;
+  const startWithWindows = manager.snapshot().settings.startWithWindows;
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: "Add companion", click: () => runAction("Could not add a companion", addCompanion) },
     { label: "Settings", click: showSettings },
     { type: "separator" },
+    {
+      label: "Start with Windows", type: "checkbox", checked: startWithWindows, enabled: autostartAvailable(),
+      click: (item) => runAction("Could not change Start with Windows", () => updateStartWithWindows(item.checked))
+    },
+    { type: "separator" },
     { label: "Quit", click: () => app.quit() }
   ]));
+}
+
+function createTray(): void {
+  const icon = nativeImage.createFromPath(path.join(__dirname, "assets", "tray-icon.png")).resize({ width: 16, height: 16 });
+  tray = new Tray(icon);
+  tray.setToolTip(PRODUCT_NAME);
+  refreshTrayMenu();
   tray.on("click", showSettings);
 }
 
@@ -366,7 +386,10 @@ function registerIpc(): void {
   ipcMain.handle("app:get-settings", () => manager.snapshot());
   ipcMain.handle("app:update-settings", (_event, updates: Partial<CompanionSettings>) => {
     const before = manager.snapshot().settings.shortcuts;
-    const settings = manager.updateSettings(updates ?? {});
+    // Login-item state is owned by Windows; the renderer may request a change but never set the internal flag.
+    const { startWithWindows, autostartInitialized: _ignored, ...rest } = updates ?? {};
+    if (typeof startWithWindows === "boolean" && startWithWindows !== manager.snapshot().settings.startWithWindows) updateStartWithWindows(startWithWindows);
+    const settings = manager.updateSettings(rest);
     if (JSON.stringify(before) !== JSON.stringify(settings.shortcuts)) applyShortcuts(settings.shortcuts);
     for (const [id, window] of companionWindows) { const companion = manager.get(id); if (companion && !window.isDestroyed()) { applyCompanion(companion, window); void sendState(id); } }
     return settings;
@@ -388,6 +411,11 @@ if (isPrimaryInstance) {
     manager = new CompanionManager(app.getPath("userData"));
     const firstRun = manager.list().length === 0;
     registerIpc();
+    try {
+      initializeAutostart(manager);
+    } catch (error) {
+      console.warn(`[autostart] ${errorMessage(error)}`);
+    }
     restoreWindows();
     createTray();
     applyShortcuts(manager.snapshot().settings.shortcuts);

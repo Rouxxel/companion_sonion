@@ -1,28 +1,31 @@
 {
   "name": "companion-sonion-desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "license": "PolyForm-Noncommercial-1.0.0",
   "description": "A minimal, taskbar-free desktop companion player.",
+  "author": "Rouxxel",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/copy-static.mjs",
     "start": "npm run build && electron .",
     "dev": "npm run start",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "package": "npm run build && electron-builder --win",
+    "package": "npm run build && electron-builder --win nsis",
     "package:portable": "npm run build && electron-builder --win portable",
     "package:dir": "npm run build && electron-builder --win --dir"
   },
   "build": {
     "appId": "com.sonion.companion",
     "productName": "Sonion Companion",
+    "copyright": "Copyright © 2026 Rouxxel",
     "directories": {
       "output": "release",
       "buildResources": "resources/build"
     },
     "files": [
       "dist/**/*",
+      "!dist/test/**",
       "package.json"
     ],
     "win": {
@@ -38,10 +41,18 @@
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Sonion Companion"
+      "shortcutName": "Sonion Companion",
+      "uninstallDisplayName": "Sonion Companion",
+      "artifactName": "SonionCompanion-Setup-${version}.${ext}",
+      "include": "resources/build/installer.nsh",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "SonionCompanion-Portable-${version}.${ext}"
     }
   },
   "devDependencies": {
