@@ -1,11 +1,15 @@
+import { RenderMode, SIZE_LIMITS, SIZE_STEP } from './constants';
+import { diffCompanions } from './renderDiff';
+
 /**
  * Shared companion renderer.
  * Both the WebviewPanel (panel mode) and the Explorer WebviewViewProvider
  * (explorer mode) use this function to produce the HTML that renders
  * companions inside their respective webview containers.
  */
-export function getCompanionHtml(mode: 'panel' | 'explorer'): string {
+export function getCompanionHtml(mode: RenderMode): string {
     const isExplorer = mode === 'explorer';
+    const limits = SIZE_LIMITS[mode];
 
     return `
     <!DOCTYPE html>
@@ -19,14 +23,92 @@ export function getCompanionHtml(mode: 'panel' | 'explorer'): string {
                 height: 100vh;
             }
 
-            img.companion {
+            /* Wrapper per companion: positioned, receives all pointer events */
+            .companion {
                 position: absolute;
+                user-select: none;
+                cursor: grab;
+            }
+
+            .companion > .media {
+                display: block;
+                width: 100%;
+                pointer-events: none;
                 -webkit-user-drag: none;
             }
 
-            img.companion:hover {
+            .companion.hovered {
                 opacity: 0.3;
-                cursor: grab;
+            }
+
+            .companion.dragging {
+                cursor: grabbing;
+            }
+
+            .companion.locked {
+                cursor: not-allowed;
+            }
+
+            /* Fallback animations for states without their own asset */
+            .companion.css-anim[data-state="typing"] > .media {
+                animation: companion-bob 0.3s ease-in-out infinite alternate;
+            }
+
+            .companion.css-anim[data-state="excited"] > .media {
+                animation: companion-bounce 0.45s ease-in-out infinite;
+            }
+
+            .companion.css-anim[data-state="reacting"] > .media {
+                animation: companion-shake 0.5s ease-in-out 1;
+            }
+
+            .companion.css-anim[data-state="sleeping"] > .media {
+                animation: companion-breathe 3s ease-in-out infinite;
+                filter: grayscale(0.6) brightness(0.8);
+            }
+
+            .companion.css-anim[data-state="sleeping"]::after {
+                content: 'z z';
+                position: absolute;
+                top: -1.2em;
+                right: 0;
+                font: italic bold 14px sans-serif;
+                color: var(--vscode-foreground, #888);
+                animation: companion-float 2.5s ease-in-out infinite;
+                pointer-events: none;
+            }
+
+            @keyframes companion-bob {
+                from { transform: translateY(0); }
+                to { transform: translateY(-2px); }
+            }
+
+            @keyframes companion-bounce {
+                0%, 100% { transform: translateY(0) scale(1); }
+                50% { transform: translateY(-8%) scale(1.05); }
+            }
+
+            @keyframes companion-shake {
+                0%, 100% { transform: translateX(0); }
+                20%, 60% { transform: translateX(-4%) rotate(-3deg); }
+                40%, 80% { transform: translateX(4%) rotate(3deg); }
+            }
+
+            @keyframes companion-breathe {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(0.97); }
+            }
+
+            @keyframes companion-float {
+                0%, 100% { transform: translateY(0); opacity: 0.6; }
+                50% { transform: translateY(-4px); opacity: 1; }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .companion.css-anim > .media,
+                .companion.css-anim::after {
+                    animation: none !important;
+                }
             }
         </style>
 
@@ -36,164 +118,307 @@ export function getCompanionHtml(mode: 'panel' | 'explorer'): string {
             const vscode = acquireVsCodeApi();
             const world = document.getElementById('world');
             const MODE = document.body.dataset.mode; // 'panel' | 'explorer'
+            const CLAMP_TO_VIEW = ${isExplorer};
+            const SIZE_MIN = ${limits.min};
+            const SIZE_MAX = ${limits.max};
+            const SIZE_STEP = ${SIZE_STEP};
 
+            ${diffCompanions.toString()}
+
+            // Rendered companions in render order, and id -> { data, el, media, src, kind, pending }
             let companions = [];
-
-            window.addEventListener('message', event => {
-                if (event.data.command === 'render') {
-                    companions = event.data.companions;
-                    render();
-                }
-            });
+            const entries = new Map();
+            let animationsEnabled = true;
+            // Render received while dragging; applied on mouseup
+            let pendingRender = null;
 
             const dragState = {
-                item: null,
-                id: null,
+                entry: null,
                 offsetX: 0,
                 offsetY: 0
             };
 
-            document.addEventListener('mousemove', (e) => {
-                if (!dragState.item) return;
-
-                let newX = e.clientX - dragState.offsetX;
-                let newY = e.clientY - dragState.offsetY;
-
-                ${isExplorer ? `
-                // Explorer mode: clamp to viewport
-                const maxW = window.innerWidth - dragState.item.offsetWidth;
-                const maxH = window.innerHeight - dragState.item.offsetHeight;
-                newX = Math.max(0, Math.min(newX, maxW));
-                newY = Math.max(0, Math.min(newY, maxH));
-                ` : ''}
-
-                dragState.item.style.left = newX + 'px';
-                dragState.item.style.top = newY + 'px';
-            });
-
-            document.addEventListener('mouseup', () => {
-                if (!dragState.item) return;
-
-                dragState.item.style.cursor = 'grab';
-
-                // Convert pixel position back to percentage
-                const windowWidth = window.innerWidth;
-                const windowHeight = window.innerHeight;
-                const pixelX = parseFloat(dragState.item.style.left);
-                const pixelY = parseFloat(dragState.item.style.top);
-                const percentX = pixelX / windowWidth;
-                const percentY = pixelY / windowHeight;
-
-                vscode.postMessage({
-                    command: 'savePosition',
-                    id: dragState.id,
-                    x: percentX,
-                    y: percentY
-                });
-
-                dragState.item = null;
-                dragState.id = null;
-            });
-
-            ${isExplorer ? `
-            // Resize observer: reflow companions when sidebar is resized
-            const resizeObserver = new ResizeObserver(() => {
-                if (!dragState.item) {
-                    render();
+            window.addEventListener('message', event => {
+                const msg = event.data;
+                if (msg.command === 'render') {
+                    if (msg.animations !== undefined && msg.animations !== animationsEnabled) {
+                        animationsEnabled = msg.animations;
+                        entries.forEach(applyVisual);
+                    }
+                    if (dragState.entry) {
+                        pendingRender = msg.companions;
+                    } else {
+                        applyRender(msg.companions);
+                    }
+                }
+                if (msg.command === 'state') {
+                    const entry = entries.get(msg.id);
+                    if (!entry) return;
+                    entry.data.state = msg.state;
+                    applyVisual(entry);
                 }
             });
-            resizeObserver.observe(document.body);
-            ` : ''}
 
-            function render() {
-                if (dragState.item) {
+            // Tell the extension the user is here (wakes sleeping companions); at most once per second
+            let lastActivity = 0;
+            function reportActivity() {
+                const now = Date.now();
+                if (now - lastActivity < 1000) return;
+                lastActivity = now;
+                vscode.postMessage({ command: 'activity' });
+            }
+
+            // Own asset for the current state, if the companion has one
+            function stateVisual(c) {
+                return c.state && c.stateVisuals ? c.stateVisuals[c.state] || null : null;
+            }
+
+            // Asset shown for the current state; falls back to the base asset
+            function visualFor(c) {
+                return stateVisual(c) || { src: c.assetPath, kind: c.assetKind || 'image' };
+            }
+
+            function createMedia(kind) {
+                const media = document.createElement(kind === 'video' ? 'video' : 'img');
+                if (kind === 'video') {
+                    media.autoplay = true;
+                    media.loop = true;
+                    media.muted = true;
+                    media.playsInline = true;
+                    media.setAttribute('playsinline', '');
+                }
+                media.className = 'media';
+                media.draggable = false;
+                return media;
+            }
+
+            function applyVisual(entry) {
+                const c = entry.data;
+                const v = visualFor(c);
+
+                if (c.state && c.state !== 'idle') {
+                    entry.el.dataset.state = c.state;
+                } else {
+                    delete entry.el.dataset.state;
+                }
+                const isStateAsset = !!stateVisual(c);
+                entry.el.classList.toggle('css-anim', animationsEnabled && !isStateAsset);
+
+                if (v.src === entry.src && v.kind === entry.kind) {
+                    // Back to what is already shown: drop any pending swap
+                    entry.pending = null;
                     return;
                 }
 
-                world.innerHTML = '';
+                if (!entry.media) {
+                    // First visual of a new companion: show it right away
+                    const media = createMedia(v.kind);
+                    media.src = v.src;
+                    entry.el.appendChild(media);
+                    entry.media = media;
+                    entry.src = v.src;
+                    entry.kind = v.kind;
+                    return;
+                }
 
+                const key = v.kind + '|' + v.src;
+                if (entry.pending === key) return;
+
+                // Load the new asset off-screen and swap once it is ready,
+                // so the current visual stays on screen instead of flashing blank
+                entry.pending = key;
+                const next = createMedia(v.kind);
+                const swap = () => {
+                    if (entry.pending !== key) return; // superseded by a newer change
+                    entry.pending = null;
+                    entry.media.replaceWith(next);
+                    entry.media = next;
+                    entry.src = v.src;
+                    entry.kind = v.kind;
+                };
+                next.addEventListener(v.kind === 'video' ? 'loadeddata' : 'load', swap, { once: true });
+                next.addEventListener('error', () => {
+                    // A broken state asset keeps the current visual; a broken main asset is shown as before
+                    if (isStateAsset) {
+                        if (entry.pending === key) entry.pending = null;
+                    } else {
+                        swap();
+                    }
+                }, { once: true });
+                if (v.kind === 'video') next.preload = 'auto';
+                next.src = v.src;
+            }
+
+            function layout(entry) {
+                const c = entry.data;
                 const windowWidth = window.innerWidth;
                 const windowHeight = window.innerHeight;
 
-                companions.forEach(c => {
-                    const img = document.createElement('img');
+                // Convert percentage to pixels
+                let pixelX = c.x * windowWidth;
+                let pixelY = c.y * windowHeight;
 
-                    img.className = 'companion';
-                    img.src = c.assetPath;
-                    img.draggable = false;
-
-                    // Convert percentage to pixels
-                    let pixelX = c.x * windowWidth;
-                    let pixelY = c.y * windowHeight;
-
-                    ${isExplorer ? `
+                if (CLAMP_TO_VIEW) {
                     // Explorer mode: clamp positions so companion stays in view
                     const maxX = Math.max(0, windowWidth - c.size);
                     const maxY = Math.max(0, windowHeight - c.size);
                     pixelX = Math.max(0, Math.min(pixelX, maxX));
                     pixelY = Math.max(0, Math.min(pixelY, maxY));
-                    ` : ''}
+                }
 
-                    img.style.left = pixelX + 'px';
-                    img.style.top = pixelY + 'px';
-                    img.style.width = c.size + 'px';
-                    img.style.opacity = 1;
-                    img.style.cursor = c.locked ? 'not-allowed' : 'grab';
+                entry.el.style.left = pixelX + 'px';
+                entry.el.style.top = pixelY + 'px';
+                entry.el.style.width = c.size + 'px';
+                entry.el.classList.toggle('locked', !!c.locked);
+            }
 
-                    img.addEventListener('mousedown', (e) => {
-                        if (c.locked) return;
-                        e.preventDefault();
+            function applyRender(next) {
+                const diff = diffCompanions(companions, next);
 
-                        dragState.item = img;
-                        dragState.id = c.id;
-                        dragState.offsetX = e.clientX - img.offsetLeft;
-                        dragState.offsetY = e.clientY - img.offsetTop;
-                        img.style.cursor = 'grabbing';
-                    });
-
-                    img.addEventListener('wheel', (e) => {
-                        e.preventDefault();
-
-                        ${isExplorer
-                            ? `const size = Math.max(30, Math.min(200, c.size + (e.deltaY < 0 ? 10 : -10)));`
-                            : `const size = Math.max(40, c.size + (e.deltaY < 0 ? 10 : -10));`
-                        }
-
-                        vscode.postMessage({
-                            command: 'resize',
-                            id: c.id,
-                            size
-                        });
-                    });
-
-                    img.addEventListener('contextmenu', (e) => {
-                        e.preventDefault();
-
-                        vscode.postMessage({
-                            command: 'contextMenu',
-                            id: c.id
-                        });
-                    });
-
-                    img.addEventListener('dblclick', (e) => {
-                        e.preventDefault();
-
-                        vscode.postMessage({
-                            command: 'delete',
-                            id: c.id
-                        });
-                    });
-
-                    img.addEventListener('mouseenter', () => {
-                        img.style.opacity = 0.3;
-                    });
-
-                    img.addEventListener('mouseleave', () => {
-                        img.style.opacity = 1;
-                    });
-
-                    world.appendChild(img);
+                diff.removed.forEach(id => {
+                    const entry = entries.get(id);
+                    if (entry) {
+                        entry.el.remove();
+                        entries.delete(id);
+                    }
                 });
+
+                diff.added.forEach(c => {
+                    const el = document.createElement('div');
+                    el.className = 'companion';
+                    const entry = { data: c, el, media: null, src: null, kind: null, pending: null };
+                    attachListeners(el, c.id);
+                    entries.set(c.id, entry);
+                    world.appendChild(el);
+                    applyVisual(entry);
+                    layout(entry);
+                });
+
+                diff.updated.forEach(c => {
+                    const entry = entries.get(c.id);
+                    if (!entry) return;
+                    entry.data = c;
+                    applyVisual(entry);
+                    layout(entry);
+                });
+
+                companions = next;
+            }
+
+            function attachListeners(el, id) {
+                el.addEventListener('mousedown', (e) => {
+                    reportActivity();
+                    const entry = entries.get(id);
+                    if (!entry || entry.data.locked || e.button !== 0) return;
+                    e.preventDefault();
+
+                    dragState.entry = entry;
+                    dragState.offsetX = e.clientX - entry.el.offsetLeft;
+                    dragState.offsetY = e.clientY - entry.el.offsetTop;
+                    entry.el.classList.add('dragging');
+                });
+
+                el.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const entry = entries.get(id);
+                    if (!entry) return;
+
+                    const size = Math.max(SIZE_MIN, Math.min(SIZE_MAX, entry.data.size + (e.deltaY < 0 ? SIZE_STEP : -SIZE_STEP)));
+                    if (size === entry.data.size) return;
+
+                    vscode.postMessage({
+                        command: 'resize',
+                        id,
+                        size
+                    });
+                }, { passive: false });
+
+                el.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+
+                    vscode.postMessage({
+                        command: 'contextMenu',
+                        id
+                    });
+                });
+
+                el.addEventListener('dblclick', (e) => {
+                    e.preventDefault();
+
+                    vscode.postMessage({
+                        command: 'delete',
+                        id
+                    });
+                });
+
+                el.addEventListener('mouseenter', () => {
+                    reportActivity();
+                    el.classList.add('hovered');
+                });
+
+                el.addEventListener('mouseleave', () => {
+                    el.classList.remove('hovered');
+                });
+            }
+
+            document.addEventListener('mousemove', (e) => {
+                const entry = dragState.entry;
+                if (!entry) return;
+
+                let newX = e.clientX - dragState.offsetX;
+                let newY = e.clientY - dragState.offsetY;
+
+                if (CLAMP_TO_VIEW) {
+                    // Explorer mode: clamp to viewport
+                    const maxW = window.innerWidth - entry.el.offsetWidth;
+                    const maxH = window.innerHeight - entry.el.offsetHeight;
+                    newX = Math.max(0, Math.min(newX, maxW));
+                    newY = Math.max(0, Math.min(newY, maxH));
+                }
+
+                entry.el.style.left = newX + 'px';
+                entry.el.style.top = newY + 'px';
+            });
+
+            document.addEventListener('mouseup', () => {
+                const entry = dragState.entry;
+                if (!entry) return;
+
+                entry.el.classList.remove('dragging');
+
+                // Convert pixel position back to percentage
+                const percentX = parseFloat(entry.el.style.left) / window.innerWidth;
+                const percentY = parseFloat(entry.el.style.top) / window.innerHeight;
+
+                // Keep local data in sync so a re-layout before the next render doesn't jump back
+                entry.data.x = percentX;
+                entry.data.y = percentY;
+
+                vscode.postMessage({
+                    command: 'savePosition',
+                    id: entry.data.id,
+                    x: percentX,
+                    y: percentY
+                });
+
+                dragState.entry = null;
+
+                if (pendingRender) {
+                    // The queued render predates this drag; keep the dropped position
+                    const next = pendingRender.map(c => c.id === entry.data.id ? Object.assign({}, c, { x: percentX, y: percentY }) : c);
+                    pendingRender = null;
+                    applyRender(next);
+                }
+            });
+
+            if (CLAMP_TO_VIEW) {
+                // Resize observer: reflow companions when sidebar is resized
+                const resizeObserver = new ResizeObserver(() => {
+                    if (!dragState.entry) {
+                        entries.forEach(layout);
+                    }
+                });
+                resizeObserver.observe(document.body);
             }
         </script>
     </body>

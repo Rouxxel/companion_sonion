@@ -1,10 +1,10 @@
 # companion-sonion
 
-A VS Code extension that brings animated companions into your editor. Spawn, customize, and manage multiple GIF/PNG/WebM companions that persist across sessions.
+A VS Code extension that brings animated companions into your editor. Spawn, customize, and manage multiple GIF/PNG/WebP/WebM/MP4 companions that persist across sessions.
 
-To generate .vsix locally navigate to companion_sonion folder and run `vsce package` (requirements are `npm install -g @vscode/vsce` and Node.js of course). Then within VSCode Ctrl + Shift + X (Extensions view) and click the gear icon and "Install from VSIX..." to install the generated .vsix file, then reload vscode window.
+To generate .vsix locally navigate to the `ide_companion/vscode_version` folder and run `vsce package` (requirements are `npm install -g @vscode/vsce` and Node.js of course). Then within VSCode Ctrl + Shift + X (Extensions view) and click the gear icon and "Install from VSIX..." to install the generated .vsix file, then reload vscode window.
 
-![Sonion](https://github.com/Rouxxel/companion_sonion/blob/main/ide_companion/companion_sonion/media/sonion.jpeg?raw=true)
+![Sonion](https://github.com/Rouxxel/companion_sonion/blob/main/ide_companion/vscode_version/media/sonion.jpeg?raw=true)
 
 ## Features
 
@@ -15,16 +15,25 @@ To generate .vsix locally navigate to companion_sonion folder and run `vsce pack
 - **Hover Effect**: Companions fade to 30% opacity when you hover over them, with cursor changing to a grab hand
 - **Lock/Unlock**: Prevent accidental movement by locking a companion (right-click context menu)
 - **Delete**: Double-click any companion to instantly remove it
-- **Custom Assets**: Change companion images via URL or import local image files (PNG, JPG, GIF, WebM)
+- **Custom Assets**: Change companion images via URL or import local files: images (PNG, JPG, GIF, WebP) or looping, muted videos (WebM, MP4)
+- **Reactions**: Companions react to you: they type along while you type, get excited when you type fast, react to new errors, fall asleep when you're away, and wake up when you're back. Each companion can follow its own behavior profile
+- **State Assets**: Give a companion a different image or video for each animation state (typing, excited, reacting, sleeping); states without their own asset use a built-in animation of the main asset
+- **Smooth Updates**: Moving, resizing or changing one companion only updates that companion, so the other animations keep playing without restarting
 - **URL/Local Mode Toggle**: Switch between URL and local file modes in the sidebar with automatic disable logic
 - **Clear current Asset**: Option to clear local file selection and switch back to URL mode
 - **Relative Positioning**: Companions use percentage-based positioning (0-1) relative to window size for consistent placement across different screen sizes
-- **Split Panel View**: Companion panel opens in split right view for better workspace integration
+- **Split Panel View**: Companion panel opens in split right view for better workspace integration, and is reopened automatically after a window reload if it was open
 - **Explorer Sidebar Integration**: Render companions directly in the Explorer sidebar for a compact, always-visible view
 - **Mode Switching**: Move companions between Panel and Explorer modes via right-click context menu
 - **Profiles**: Save and load entire companion layouts as named profiles
 - **Import/Export**: Export your world state to JSON and import it later to restore your companions
 - **Persistence**: All companion positions, sizes, and settings are automatically saved and restored on startup
+
+## Compatibility
+
+- Requires VS Code **1.89** or newer.
+- Also works in editors built on VS Code (Cursor, Windsurf, Kiro, Antigravity, VSCodium, …) whose VS Code base is 1.89 or newer. You can see an editor's base under **Help → About** (the "VS Code" or "Code" version line).
+- Those editors usually install extensions from [Open VSX](https://open-vsx.org) instead of the VS Code Marketplace. If Companion Sonion isn't listed there, download the `.vsix` (from the Marketplace page via **Download Extension**, or build it as described above) and install it with **Extensions: Install from VSIX…**, or by dragging the file into the Extensions view.
 
 ## Usage
 
@@ -58,9 +67,61 @@ To generate .vsix locally navigate to companion_sonion folder and run `vsce pack
      - **Delete**: Remove the companion
      - **Change Asset URL**: Update the image URL
      - **Import Local Asset**: Select a local image file to use
+     - **Set State Asset…**: Choose a state, then use a URL, import a local file, or clear it (see [Animation States](#animation-states))
+     - **Set Behavior Profile…**: Choose how this companion reacts (see [Reactions](#reactions))
      - **Clear current Asset (Switch to URL)**: Clear local file selection and switch to URL mode (only shown when local asset is active)
      - **Move to Explorer**: Move companion from Panel to Explorer mode (Panel only)
      - **Move to Panel**: Move companion from Explorer to Panel mode (Explorer only)
+
+### Animation States
+
+Each companion can be in one of these states: `idle`, `typing`, `excited`, `reacting`, `sleeping`.
+
+- `idle` always shows the companion's main asset.
+- Every other state can have its own asset: right-click → **Set State Asset…**, or run `Companion: Set State Asset`.
+- States without their own asset show the main asset with a built-in animation: a small bob (typing), a bounce (excited), a short shake (reacting), or a dimmed, slowly breathing companion with "z z" (sleeping). Turn these off with the `companion.behavior.cssAnimations` setting; they are also disabled when your OS asks for reduced motion.
+- When a companion switches to an asset it hasn't shown yet, the current one stays on screen until the new one has loaded (no blank flash). If a state asset fails to load, the companion keeps showing its current asset.
+- To see what a state looks like, run `Companion: Preview State`. Previews are temporary and are not saved; the next reaction replaces them.
+
+### Reactions
+
+Companions switch states on their own based on what you do:
+
+| You… | Companion |
+| ---- | --------- |
+| type in the active editor | `typing`, back to `idle` ~1.5 s after your last keystroke |
+| type fast (≥ 8 characters per second over 3 s) | `excited` |
+| do nothing for 2 minutes | `sleeping` |
+| introduce a new error in the active file | `reacting` for 3 s |
+| type, move the cursor, scroll, switch editors, focus the window, or hover a companion | wakes up |
+
+- Only your edits in the active editor count as typing. Output panels, git, other extensions editing files, Format Document, rename and undo/redo do not, and pastes count as at most 20 characters.
+- Turn reactions on or off with `Companion: Toggle Reactions` or the `companion.behavior.enabled` setting. When off, companions always show their main asset.
+- Error reactions only count **errors** (not warnings) in the file you're looking at, and only when their number goes up. Opening or switching to a file that already has errors doesn't trigger them. Turn them off with `companion.behavior.reactToErrors`.
+- Reactions don't change your saved companions: positions, profiles and exports are never touched while you type.
+- Tune timings in the settings below, and choose how companions behave with a **behavior profile**:
+  - `default`: typing, excited, sleeping and error reactions as described above
+  - `calm`: only falls asleep
+  - `coder-pet`: like `default`, and gets excited for 2 s when you fix the last error in a file
+  - `none`: no reactions
+- Every companion uses `companion.behavior.defaultProfile` unless you give it its own: right-click → **Set Behavior Profile…**, or run `Companion: Set Behavior Profile`. The choice is saved with the companion (and in profiles and exports). If the profile is later removed, the companion falls back to the default.
+- You can also write your own profiles in `companion.behavior.profiles`. Each rule maps an event to a state, optionally only for some languages. For example, a companion that only reacts while you work in TypeScript or Python:
+
+```json
+"companion.behavior.profiles": [
+  {
+    "name": "ts-py-buddy",
+    "rules": [
+      { "on": "rapidTyping", "state": "excited", "when": { "languageId": ["typescript", "python"] } },
+      { "on": "typing", "state": "typing", "when": { "languageId": ["typescript", "python"] } },
+      { "on": "errorAppeared", "state": "reacting", "when": { "languageId": ["typescript", "python"] } },
+      { "on": "inactive", "state": "sleeping" }
+    ]
+  }
+]
+```
+
+  Events `typing`, `rapidTyping` and `inactive` hold their state while they last. Events `activity`, `typingStopped`, `errorAppeared` and `errorsCleared` show their state briefly (`durationMs`, default `companion.behavior.reactionDurationMs`), and only if it outranks the current one (`reacting` > `excited` > `typing` > `idle` > `sleeping`). Invalid profiles are skipped with a warning.
 
 ### Mode Switching
 
@@ -89,8 +150,24 @@ Save and restore companion layouts:
 
 - **Import World**: Run `Companion: Import Companion World`
   - Load companions from a previously exported JSON file
+  - Exports from older versions still load. Invalid entries are skipped and reported ("Imported 4 companions, skipped 1 invalid"); positions and sizes outside the allowed range are clamped
+  - State assets are included in exports; local files are referenced by name, so they only resolve on the machine that imported them (otherwise the default asset is shown)
 
 ## Extension Settings
+
+This extension contributes the following settings:
+
+| Setting | Default | Description |
+| ------- | ------- | ----------- |
+| `companion.behavior.enabled` | `true` | Let companions react to typing, fast typing and inactivity |
+| `companion.behavior.sleepAfterSeconds` | `120` | Seconds without activity before companions fall asleep (min 10) |
+| `companion.behavior.typingCooldownMs` | `1500` | Milliseconds after the last keystroke before the typing state ends (min 200) |
+| `companion.behavior.excitedCharsPerSecond` | `8` | Typing speed that makes companions excited; `0` disables |
+| `companion.behavior.reactToErrors` | `true` | React when new errors appear in the active file |
+| `companion.behavior.reactionDurationMs` | `3000` | Default length of short reactions (e.g. reacting to errors) |
+| `companion.behavior.defaultProfile` | `"default"` | Behavior profile: `default`, `calm`, `coder-pet`, `none`, or one of your own |
+| `companion.behavior.profiles` | `[]` | Your own behavior profiles (see [Reactions](#reactions)) |
+| `companion.behavior.cssAnimations` | `true` | Play built-in animations for states that have no asset of their own |
 
 This extension contributes the following commands:
 
@@ -98,6 +175,10 @@ This extension contributes the following commands:
 - `companion.spawnExplorer`: Spawn a companion in Explorer mode
 - `companion.moveToExplorer`: Move a Panel companion to Explorer mode
 - `companion.moveToPanel`: Move an Explorer companion to Panel mode
+- `companion.toggleBehavior`: Turn companion reactions on or off
+- `companion.setBehaviorProfile`: Choose the behavior profile of a companion
+- `companion.setStateAsset`: Set or clear the asset a companion shows in a given animation state
+- `companion.previewState`: Temporarily show a companion in a given animation state
 - `companion.saveProfile`: Save current companions as a named profile
 - `companion.loadProfile`: Load a saved profile
 - `companion.exportWorld`: Export companions to JSON
@@ -105,11 +186,30 @@ This extension contributes the following commands:
 
 ## Known Issues
 
-- Companions reset on extension reload (use profiles to save state)
+- Reactions start once the extension is active: when the Panel is restored after a reload, a Companion view is shown, or a Companion command is run
+- If you closed the Panel before reloading, it stays closed; your companions are kept and reappear when you spawn a Panel companion or use **Move to Panel** from an Explorer companion's menu
+- Error reactions depend on your language extension reporting errors for the open file; files without a language server never trigger them
+- Typing detection is a heuristic: an edit at your cursor from another extension (e.g. an auto-closing helper) can count as typing, and typing over a selection spanning several lines doesn't
 - Large images or high refresh rates may impact performance
 - Explorer mode companions are constrained to the sidebar viewport and cannot overlay native Explorer content
 
 ## Release Notes
+
+### 0.3.1
+
+- Minimum VS Code version lowered to 1.89, so the extension installs in VS Code-based editors such as Cursor, Windsurf, Kiro and Antigravity (see [Compatibility](#compatibility)). No feature changes
+
+### 0.3.0
+
+- Reactions: companions type along while you type, get excited when you type fast, react to new errors and fall asleep when you're away
+- Animation states with an optional image/video per state, plus built-in fallback animations
+- Behavior profiles: built-in (`default`, `calm`, `coder-pet`, `none`) or your own, per companion
+- WebM/MP4 companions play; companions update individually so animations no longer restart
+- Safer import: invalid entries are skipped and reported
+- The Panel reopens after a window reload; new assets swap in only once loaded
+- New settings under `companion.behavior.*` and commands Toggle Reactions, Set Behavior Profile, Set State Asset, Preview State
+
+See [CHANGELOG.md](https://github.com/Rouxxel/companion_sonion/blob/main/ide_companion/vscode_version/CHANGELOG.md) for details.
 
 ### 0.2.0
 

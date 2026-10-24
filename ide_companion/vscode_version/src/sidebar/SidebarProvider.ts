@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CompanionPanel } from '../companion/CompanionPanel';
+import { ASSET_FILE_FILTERS } from '../companion/constants';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
 
@@ -47,11 +47,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     canSelectFiles: true,
                     canSelectMany: false,
                     openLabel: 'Select Companion Asset',
-                    filters: {
-                        Images: ['png', 'jpg', 'jpeg', 'gif', 'webp'],
-                        Videos: ['mp4', 'webm'],
-                        All: ['*']
-                    }
+                    filters: ASSET_FILE_FILTERS
                 });
 
                 if (!uris || uris.length === 0) {
