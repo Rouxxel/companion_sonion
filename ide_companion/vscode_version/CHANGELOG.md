@@ -6,8 +6,14 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+### Added
+
+- WebM and MP4 companions now play (looping, muted); previously they were rendered as images and did not show
+
 ### Changed
 
+- Companions are updated individually instead of redrawing the whole view, so moving, resizing or changing one companion no longer restarts the other companions' animations
+- Right-click no longer starts a drag; resizing past the size limit no longer triggers a save
 - Panel and Explorer companions now share one implementation for the context menu, asset loading and webview messages, so both modes behave identically
 - File pickers (sidebar and "Import Local Asset") accept the same formats: PNG, JPG, JPEG, GIF, WebP, WebM, MP4
 

@@ -7,3 +7,22 @@ export interface Companion {
     locked: boolean;
     renderMode?: 'panel' | 'explorer'; // defaults to 'panel' when undefined
 }
+
+export type AssetKind = 'image' | 'video';
+
+export interface ResolvedAsset {
+    src: string;
+    kind: AssetKind;
+}
+
+/** Companion as sent to the webview: assets resolved to webview URIs. */
+export interface RenderCompanion extends Companion {
+    assetKind: AssetKind;
+    state?: string;
+    stateVisuals?: Partial<Record<string, ResolvedAsset>>;
+}
+
+export interface CompanionChange {
+    /** Ids of the changed companions; undefined means everything may have changed. */
+    ids?: string[];
+}

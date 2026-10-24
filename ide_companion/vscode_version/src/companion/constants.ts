@@ -9,6 +9,8 @@ export const SIZE_LIMITS: Record<RenderMode, { min: number; max: number }> = {
     explorer: { min: 30, max: 200 }
 };
 
+export const VIDEO_EXTENSIONS = ['webm', 'mp4'];
+
 export const ASSET_FILE_FILTERS: Record<string, string[]> = {
     'Images & Videos': ['png', 'jpg', 'jpeg', 'gif', 'webp', 'webm', 'mp4']
 };

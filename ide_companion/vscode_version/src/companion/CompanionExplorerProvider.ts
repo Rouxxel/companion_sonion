@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { CompanionManager } from './CompanionManager';
 import { getCompanionHtml } from './companionHtml';
 import { CompanionPanel } from './CompanionPanel';
-import { getRenderCompanions, handleWebviewMessage } from './companionView';
+import { AssetResolver, handleWebviewMessage } from './companionView';
 
 /**
  * Renders companions inside the VS Code Explorer sidebar
@@ -12,6 +12,7 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider, vs
 
     private webviewView?: vscode.WebviewView;
     private viewDisposables: vscode.Disposable[] = [];
+    private assets?: AssetResolver;
 
     constructor(
         private readonly extensionUri: vscode.Uri,
@@ -21,6 +22,7 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider, vs
     resolveWebviewView(webviewView: vscode.WebviewView) {
         this.disposeView();
         this.webviewView = webviewView;
+        this.assets = new AssetResolver(this.manager, webviewView.webview);
 
         const localAssetStorageUri = this.manager.getLocalAssetStorageUri();
         webviewView.webview.options = {
@@ -35,7 +37,8 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider, vs
 
         this.viewDisposables.push(
             // Subscribe to manager changes and push updated companion list
-            this.manager.onDidChange(() => {
+            this.manager.onDidChange(change => {
+                this.assets?.onManagerChange(change);
                 this.postRender();
             }),
 
@@ -67,9 +70,10 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider, vs
 
     private async postRender() {
         const view = this.webviewView;
-        if (!view) { return; }
+        const assets = this.assets;
+        if (!view || !assets) { return; }
 
-        const comps = await getRenderCompanions(this.manager, view.webview, 'explorer');
+        const comps = await assets.getRenderCompanions('explorer');
         if (this.webviewView !== view) { return; }
 
         view.webview.postMessage({ command: 'render', companions: comps });
@@ -79,6 +83,7 @@ export class CompanionExplorerProvider implements vscode.WebviewViewProvider, vs
         this.viewDisposables.forEach(d => d.dispose());
         this.viewDisposables = [];
         this.webviewView = undefined;
+        this.assets = undefined;
     }
 
     dispose() {

@@ -1,6 +1,6 @@
 # companion-sonion
 
-A VS Code extension that brings animated companions into your editor. Spawn, customize, and manage multiple GIF/PNG/WebM companions that persist across sessions.
+A VS Code extension that brings animated companions into your editor. Spawn, customize, and manage multiple GIF/PNG/WebP/WebM/MP4 companions that persist across sessions.
 
 To generate .vsix locally navigate to the `ide_companion/vscode_version` folder and run `vsce package` (requirements are `npm install -g @vscode/vsce` and Node.js of course). Then within VSCode Ctrl + Shift + X (Extensions view) and click the gear icon and "Install from VSIX..." to install the generated .vsix file, then reload vscode window.
 
@@ -15,7 +15,8 @@ To generate .vsix locally navigate to the `ide_companion/vscode_version` folder 
 - **Hover Effect**: Companions fade to 30% opacity when you hover over them, with cursor changing to a grab hand
 - **Lock/Unlock**: Prevent accidental movement by locking a companion (right-click context menu)
 - **Delete**: Double-click any companion to instantly remove it
-- **Custom Assets**: Change companion images via URL or import local image files (PNG, JPG, GIF, WebP)
+- **Custom Assets**: Change companion images via URL or import local files: images (PNG, JPG, GIF, WebP) or looping, muted videos (WebM, MP4)
+- **Smooth Updates**: Moving, resizing or changing one companion only updates that companion, so the other animations keep playing without restarting
 - **URL/Local Mode Toggle**: Switch between URL and local file modes in the sidebar with automatic disable logic
 - **Clear current Asset**: Option to clear local file selection and switch back to URL mode
 - **Relative Positioning**: Companions use percentage-based positioning (0-1) relative to window size for consistent placement across different screen sizes

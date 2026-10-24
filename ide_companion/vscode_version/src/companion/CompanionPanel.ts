@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { CompanionManager } from './CompanionManager';
 import { getCompanionHtml } from './companionHtml';
-import { getRenderCompanions, handleWebviewMessage } from './companionView';
+import { AssetResolver, handleWebviewMessage } from './companionView';
 
 export class CompanionPanel {
     public static currentPanel: CompanionPanel | undefined;
@@ -9,6 +9,7 @@ export class CompanionPanel {
     private panel: vscode.WebviewPanel;
     private _isDisposed = false;
     private _changeSubscription?: vscode.Disposable;
+    private assets: AssetResolver;
 
     public static createOrShow(extensionUri: vscode.Uri, manager: CompanionManager) {
         const panel = CompanionPanel.currentPanel ?? new CompanionPanel(extensionUri, manager);
@@ -18,7 +19,8 @@ export class CompanionPanel {
 
     private startRenderLoop() {
         // subscribe to manager changes and push updated companion list
-        this._changeSubscription = this.manager.onDidChange(() => {
+        this._changeSubscription = this.manager.onDidChange(change => {
+            this.assets.onManagerChange(change);
             this.postRender();
         });
 
@@ -46,6 +48,7 @@ export class CompanionPanel {
             }
         );
 
+        this.assets = new AssetResolver(manager, this.panel.webview);
         CompanionPanel.currentPanel = this;
 
         this.panel.onDidDispose(() => {
@@ -66,7 +69,7 @@ export class CompanionPanel {
             return;
         }
 
-        const comps = await getRenderCompanions(this.manager, this.panel.webview, 'panel');
+        const comps = await this.assets.getRenderCompanions('panel');
         if (this._isDisposed) {
             return;
         }

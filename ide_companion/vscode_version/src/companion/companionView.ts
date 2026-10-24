@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { Companion } from './Companion';
+import { AssetKind, CompanionChange, RenderCompanion, ResolvedAsset } from './Companion';
 import { CompanionManager } from './CompanionManager';
-import { ASSET_FILE_FILTERS, DEFAULT_ASSET_URL, RenderMode } from './constants';
+import { ASSET_FILE_FILTERS, DEFAULT_ASSET_URL, RenderMode, VIDEO_EXTENSIONS } from './constants';
 
 /**
  * Shared logic for the Panel and Explorer renderers: asset resolution,
@@ -10,29 +10,68 @@ import { ASSET_FILE_FILTERS, DEFAULT_ASSET_URL, RenderMode } from './constants';
 
 const isLocalAsset = (assetPath: string) => typeof assetPath === 'string' && assetPath.startsWith('local:');
 
-export async function resolveAssetUri(manager: CompanionManager, webview: vscode.Webview, assetPath: string): Promise<string> {
+/** Detects video assets by file extension (query string and fragment ignored). */
+export function getAssetKind(assetPath: string): AssetKind {
+    const path = (assetPath || '').split(/[?#]/)[0];
+    const dot = path.lastIndexOf('.');
+    const ext = dot === -1 ? '' : path.substring(dot + 1).toLowerCase();
+    return VIDEO_EXTENSIONS.includes(ext) ? 'video' : 'image';
+}
+
+const DEFAULT_ASSET: ResolvedAsset = { src: DEFAULT_ASSET_URL, kind: getAssetKind(DEFAULT_ASSET_URL) };
+
+export async function resolveAssetUri(manager: CompanionManager, webview: vscode.Webview, assetPath: string): Promise<ResolvedAsset> {
     if (!isLocalAsset(assetPath)) {
-        return assetPath;
+        return { src: assetPath, kind: getAssetKind(assetPath) };
     }
     const fsUri = manager.getLocalAssetFsPath(assetPath);
     if (!fsUri) {
         console.error(`Could not resolve local asset path for: ${assetPath}`);
-        return DEFAULT_ASSET_URL;
+        return DEFAULT_ASSET;
     }
     try {
         await vscode.workspace.fs.stat(fsUri);
-        return webview.asWebviewUri(fsUri).toString();
+        return { src: webview.asWebviewUri(fsUri).toString(), kind: getAssetKind(assetPath) };
     } catch (e) {
         console.error(`Local asset not found: ${fsUri.toString()}`, e);
-        return DEFAULT_ASSET_URL;
+        return DEFAULT_ASSET;
     }
 }
 
-export async function getRenderCompanions(manager: CompanionManager, webview: vscode.Webview, mode: RenderMode): Promise<Companion[]> {
-    return Promise.all(manager.getAllForMode(mode).map(async c => ({
-        ...c,
-        assetPath: await resolveAssetUri(manager, webview, c.assetPath)
-    })));
+/**
+ * Resolves companions for one webview. Local assets are cached by marker
+ * (markers are unique per imported file); the cache is cleared on changes
+ * that may affect every companion (profile load, world import).
+ */
+export class AssetResolver {
+    private cache = new Map<string, ResolvedAsset>();
+
+    constructor(private readonly manager: CompanionManager, private readonly webview: vscode.Webview) {}
+
+    onManagerChange(change: CompanionChange) {
+        if (!change.ids) {
+            this.cache.clear();
+        }
+    }
+
+    private async resolve(assetPath: string): Promise<ResolvedAsset> {
+        if (!isLocalAsset(assetPath)) {
+            return resolveAssetUri(this.manager, this.webview, assetPath);
+        }
+        let resolved = this.cache.get(assetPath);
+        if (!resolved) {
+            resolved = await resolveAssetUri(this.manager, this.webview, assetPath);
+            this.cache.set(assetPath, resolved);
+        }
+        return resolved;
+    }
+
+    async getRenderCompanions(mode: RenderMode): Promise<RenderCompanion[]> {
+        return Promise.all(this.manager.getAllForMode(mode).map(async c => {
+            const asset = await this.resolve(c.assetPath);
+            return { ...c, assetPath: asset.src, assetKind: asset.kind };
+        }));
+    }
 }
 
 async function promptAssetUrl(value = ''): Promise<string | undefined> {
