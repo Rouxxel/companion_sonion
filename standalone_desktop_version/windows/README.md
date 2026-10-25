@@ -168,14 +168,17 @@ PNG, JPEG, GIF, WebP, BMP, SVG and WebM. Local files up to 25 MB, remote files u
 
 ## Development
 
-Run everything from `standalone_desktop_version/windows`. Use `npm.cmd` instead of `npm` if PowerShell execution policies block the npm shim.
+The desktop apps share most of their code: `standalone_desktop_version/` is an npm workspace with the platform-neutral core in `shared/` (`@sonion/companion-core`) and one folder per OS. **Install once at the workspace root**, then run the commands below from `standalone_desktop_version/windows`. Use `npm.cmd` instead of `npm` if PowerShell execution policies block the npm shim.
 
 ```powershell
-npm install               # First time (also downloads the Electron binary)
-npm start                 # Build and launch from source
-npm run build             # Compile TypeScript + copy renderer files and resources into dist/
+cd standalone_desktop_version
+npm install               # First time, at the workspace root (also downloads the Electron binary)
+npm test                  # All unit tests: shared core + Windows
+cd windows
+npm start                 # Build (shared core + Windows) and launch from source
+npm run build             # Build the shared core, compile the Windows code, copy resources into dist/
 npm run typecheck         # Type-check without emitting
-npm test                  # Unit tests (data storage, layouts, multi-monitor geometry, startup entry)
+npm test                  # Windows unit tests (startup entry); shared tests run from the workspace root
 npm run test:install      # Installer round trip on this PC (see below)
 npm run package:dir       # Unpacked app in release/win-unpacked/ (fast check, no installer)
 npm run package           # Installer in release/
@@ -185,8 +188,9 @@ npm run package:portable  # Portable .exe in release/
 ### Build the installer
 
 ```powershell
-cd standalone_desktop_version/windows
+cd standalone_desktop_version
 npm install
+cd windows
 npm run package
 ```
 
@@ -223,9 +227,10 @@ Keep those secrets out of the repository; set them as environment variables or C
 
 ### Project layout
 
-Everything the build needs lives in this folder:
+Everything the build needs lives in this folder and `../shared`:
 
-- `src/` — main process, preload and renderer code (`src/test/` — unit tests)
+- `../shared/` — the shared core used by every desktop app: main-process logic (`src/app.ts`), data model and multi-monitor geometry, updater, preload, renderer pages (`renderer/`) and their unit tests
+- `src/` — the Windows parts: `main.ts` (starts the shared app with the Windows adapter), `platform-windows.ts` (taskbar identity, tray icon, defaults), `autostart.ts` / `startup-entry.ts` (Start with Windows), `src/test/` — unit tests
 - `resources/assets/` — default companion image and tray icon (copied into the app)
 - `resources/build/` — app/installer icon (`icon.ico`, 16–256 px) and uninstaller steps (`installer.nsh`)
 - `scripts/` — build helper and the installer smoke test

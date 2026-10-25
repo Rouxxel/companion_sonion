@@ -1,8 +1,8 @@
 import { app } from "electron";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
-import { AUTOSTART_ARG, AUTOSTART_NAME, isPortable, portableExecutablePath } from "./app-identity";
-import { CompanionManager } from "./companion-manager";
+import { AUTOSTART_ARG, CompanionManager } from "@sonion/companion-core";
+import { AUTOSTART_NAME, isPortable, portableExecutablePath } from "./windows-identity";
 import { parseRegQueryValue, programFromCommandLine, startupApprovedEnabled } from "./startup-entry";
 
 /**

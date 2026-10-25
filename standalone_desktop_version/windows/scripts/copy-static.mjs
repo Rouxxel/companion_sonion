@@ -1,11 +1,10 @@
 import { cp, mkdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 
-// Copies the non-TypeScript app files into dist/. Everything comes from this project
-// (src/renderer and resources/assets); nothing is read from outside this folder.
+// Copies this app's bundled assets (resources/assets) into dist/assets. The renderer pages and the
+// preload script ship inside @sonion/companion-core (standalone_desktop_version/shared).
 const root = join(import.meta.dirname, "..");
 const copies = [
-  { from: join(root, "src", "renderer"), to: join(root, "dist", "renderer"), filter: (entry) => !entry.endsWith(".ts") },
   { from: join(root, "resources", "assets"), to: join(root, "dist", "assets") }
 ];
 const requiredFiles = [

@@ -7,10 +7,10 @@
   "author": "Rouxxel",
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json && node scripts/copy-static.mjs",
+    "build": "npm --prefix ../shared run build && node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json && node scripts/copy-static.mjs",
     "start": "npm run build && electron .",
     "dev": "npm run start",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "npm --prefix ../shared run build && tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --test --test-reporter=spec \"dist/test/**/*.test.js\"",
     "test:install": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-install.ps1",
     "package": "npm run build && electron-builder --win nsis",
@@ -28,7 +28,8 @@
     "files": [
       "dist/**/*",
       "!dist/test/**",
-      "package.json"
+      "package.json",
+      "!**/node_modules/@sonion/companion-core/{src,build-test,tsconfig*.json,.gitignore}"
     ],
     "win": {
       "target": [
@@ -64,12 +65,12 @@
     ]
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "electron": "^43.1.1",
-    "electron-builder": "^26.5.0",
-    "typescript": "^5.8.0"
+    "@types/node": "22.20.1",
+    "electron": "43.7.9",
+    "electron-builder": "26.15.3",
+    "typescript": "5.9.3"
   },
   "dependencies": {
-    "electron-updater": "6.8.10"
+    "@sonion/companion-core": "*"
   }
 }
