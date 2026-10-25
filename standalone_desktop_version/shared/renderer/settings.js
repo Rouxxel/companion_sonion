@@ -31,6 +31,12 @@
     updates.disabled = !info.updatesAvailable;
     updates.title = info.updatesAvailable ? "" : "Updates are only available in the installed app.";
     $("#data-path").textContent = info.dataPath;
+    // macOS: shortcuts are written with Command (⌘) instead of Control
+    if (info.platform === "darwin") {
+      $("#shortcut-example").textContent = "Command+Alt+Shift+A (⌘⌥⇧A)";
+      fields.shortcutAdd.placeholder = "Command+Alt+Shift+A";
+      fields.shortcutSettings.placeholder = "Command+Alt+Shift+S";
+    }
     // Start at login: label, availability and explanation come from the platform (Windows, macOS, Linux)
     $("#autostart-label").textContent = info.autostart.label;
     fields.startWithWindows.disabled = !info.autostart.available;

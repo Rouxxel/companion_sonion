@@ -1,0 +1,56 @@
+{
+  "name": "sonion-companion-macos",
+  "version": "0.2.0",
+  "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "description": "Floating desktop companions for macOS.",
+  "author": "Rouxxel",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "npm --prefix ../shared run build && node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json && node scripts/copy-static.mjs",
+    "start": "npm run build && electron .",
+    "typecheck": "npm --prefix ../shared run build && tsc -p tsconfig.json --noEmit",
+    "package:dir": "npm run build && electron-builder --mac --dir",
+    "package": "npm run build && electron-builder --mac"
+  },
+  "build": {
+    "appId": "com.sonion.companion",
+    "productName": "Sonion Companion",
+    "copyright": "Copyright © 2026 Rouxxel",
+    "directories": {
+      "output": "release",
+      "buildResources": "resources/build"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json",
+      "!**/node_modules/@sonion/companion-core/{src,build-test,tsconfig*.json,.gitignore}"
+    ],
+    "mac": {
+      "category": "public.app-category.entertainment",
+      "icon": "resources/build/icon.png",
+      "target": [
+        { "target": "dmg", "arch": ["arm64", "x64"] },
+        { "target": "zip", "arch": ["arm64", "x64"] }
+      ],
+      "extendInfo": {
+        "LSUIElement": true
+      }
+    },
+    "dmg": {
+      "artifactName": "SonionCompanion-${version}-${arch}.${ext}"
+    },
+    "zip": {
+      "artifactName": "SonionCompanion-${version}-${arch}-mac.${ext}"
+    }
+  },
+  "dependencies": {
+    "@sonion/companion-core": "*"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "electron": "43.7.9",
+    "electron-builder": "26.15.3",
+    "typescript": "5.9.3"
+  }
+}

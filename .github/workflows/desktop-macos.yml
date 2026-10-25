@@ -1,0 +1,81 @@
+name: Desktop macOS (dev build)
+
+# Manual only: builds the macOS app from standalone_desktop_version/macos (unsigned, ad-hoc signed),
+# runs the unit tests, launches the app on the runner and uploads screenshots plus the .app for
+# hands-on checks. Signing, notarization and release publishing are added later.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: standalone_desktop_version
+    env:
+      # No Developer ID certificate yet: don't look for one in the keychain.
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: standalone_desktop_version/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Unit tests (shared core + platforms)
+        run: npm test
+
+      - name: Build the app (arm64, unpacked)
+        working-directory: standalone_desktop_version/macos
+        run: |
+          npm run build
+          npx electron-builder --mac dir --arm64
+          APP="release/mac-arm64/Sonion Companion.app"
+          # Ad-hoc signature so Apple silicon runs the modified bundle (Developer ID signing comes later).
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          /usr/libexec/PlistBuddy -c "Print :LSUIElement" "$APP/Contents/Info.plist"
+
+      - name: Launch and take screenshots
+        working-directory: standalone_desktop_version/macos
+        run: |
+          APP="release/mac-arm64/Sonion Companion.app"
+          mkdir -p screenshots
+          "$APP/Contents/MacOS/Sonion Companion" > screenshots/app.log 2>&1 &
+          sleep 20
+          screencapture -x screenshots/1-first-launch.png
+          # Opening the app again must not start a second copy; it shows Settings instead.
+          open -n "$APP"
+          sleep 10
+          screencapture -x screenshots/2-opened-again.png
+          MAIN_PROCESSES=$(pgrep -f "Sonion Companion.app/Contents/MacOS/Sonion Companion$" | wc -l | tr -d ' ')
+          echo "Main processes after opening again: $MAIN_PROCESSES" | tee screenshots/result.txt
+          ls -la "$HOME/Library/Application Support/Sonion Companion" | tee -a screenshots/result.txt
+          pkill -f "Sonion Companion.app/Contents/MacOS" || true
+          test "$MAIN_PROCESSES" = "1"
+
+      - name: Zip the app for download
+        if: always()
+        working-directory: standalone_desktop_version/macos
+        run: |
+          if [ -d "release/mac-arm64/Sonion Companion.app" ]; then
+            ditto -c -k --keepParent "release/mac-arm64/Sonion Companion.app" "SonionCompanion-dev-arm64.zip"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-dev-build
+          path: |
+            standalone_desktop_version/macos/screenshots/
+            standalone_desktop_version/macos/SonionCompanion-dev-arm64.zip
+          if-no-files-found: warn
+          retention-days: 14

@@ -4,7 +4,8 @@
   "description": "npm workspace for the Sonion Companion desktop apps: shared core + one app per OS.",
   "workspaces": [
     "shared",
-    "windows"
+    "windows",
+    "macos"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",

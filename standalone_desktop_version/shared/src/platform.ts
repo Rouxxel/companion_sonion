@@ -38,6 +38,8 @@ export interface PlatformAdapter {
   /** Defaults for missing/invalid saved values (shortcuts use ⌘ on macOS, for example). */
   defaults: { shortcuts: ShortcutSettings; idleSleep?: IdleSleepSettings };
   trayIcon(): NativeImage;
+  /** Brings the app to the foreground when Settings opens (needed on macOS, where the app has no Dock icon). */
+  focusApp?(): void;
   /** Applies "keep on top" (and any OS-specific window level/Spaces behavior) to a companion window. */
   applyAlwaysOnTop?(window: BrowserWindow, alwaysOnTop: boolean): void;
   /** True when the OS started the app at login (don't open Settings then). */

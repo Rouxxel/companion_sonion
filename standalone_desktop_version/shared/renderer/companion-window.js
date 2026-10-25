@@ -250,7 +250,8 @@
   document.addEventListener("keydown", async (event) => {
     if (event.key === "Escape") { hideMenu(); hideUrlDialog(); return; }
     if (!urlDialog.hidden) return;
-    if (event.key === "Delete") { event.preventDefault(); await call("remove"); }
+    // Delete, or ⌘⌫ (Mac keyboards' "delete" key is Backspace)
+    if (event.key === "Delete" || (event.metaKey && event.key === "Backspace")) { event.preventDefault(); await call("remove"); }
     if (event.key.toLowerCase() === "l") applyState(await call("toggleLock"));
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "o") { event.preventDefault(); applyState(await call("chooseLocalAsset")); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "u") { event.preventDefault(); showUrlDialog(); }

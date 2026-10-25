@@ -233,6 +233,7 @@ function restoreWindows(): void {
  * pinned taskbar icon, Finder, app menu) shows it.
  */
 function showSettings(): void {
+  platform.focusApp?.();
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     if (settingsWindow.isMinimized()) settingsWindow.restore();
     settingsWindow.show();
