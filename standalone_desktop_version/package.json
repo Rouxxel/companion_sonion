@@ -1,0 +1,14 @@
+{
+  "name": "sonion-companion-desktop-workspace",
+  "private": true,
+  "description": "npm workspace for the Sonion Companion desktop apps: shared core + one app per OS.",
+  "workspaces": [
+    "shared",
+    "windows"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
+}
