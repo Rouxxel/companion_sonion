@@ -25,6 +25,7 @@ Use **Settings → Apps → Installed apps → Sonion Companion → Uninstall** 
 - It removes the program, its shortcuts, its Installed apps entry and the Start with Windows entry.
 - It then asks **"Also delete your companions, layouts and cached assets?"**. The default is **No**, which keeps `%APPDATA%\Sonion Companion` for a future reinstall.
 - Silent uninstalls (`"Uninstall Sonion Companion.exe" /S`) always keep that data.
+- To remove the data without uninstalling, use Settings → **Delete all data…**.
 
 ### Portable `.exe` (no installer)
 
@@ -115,6 +116,7 @@ Open it with `Ctrl+Alt+Shift+S`, from the tray icon, or by launching the app aga
 - **Keyboard shortcuts** — turn the system-wide shortcuts on or off and change them. Each one shows *Active* or *Not available* (another app uses it, or the combination isn't valid). Use Electron accelerator names, for example `Control+Alt+Shift+A`
 - **Layouts** — save, load and delete named layouts. Loading a layout restores companions and their display settings; it doesn't change your shortcuts or Start with Windows
 - **Open data folder** — opens the data folder in Explorer
+- **Delete all data…** — after confirmation, quits and permanently deletes the data folder (companions, layouts, settings, cached assets); the app starts fresh next time. Start with Windows isn't changed
 - **Export companions…** / **Import companions…** — see [Moving to another PC](#moving-to-another-pc)
 - **Version** and **Check for updates** — at the bottom
 
@@ -156,7 +158,7 @@ PNG, JPEG, GIF, WebP, BMP, SVG and WebM. Local files up to 25 MB, remote files u
 - **"Couldn't check for updates"** — "No update has been published yet" means there's nothing newer to download; otherwise check your internet connection. Updates only work in the installed app (not the portable one).
 - **Companions look greyed out with "z z"** — they're dozing because you've been away; move the mouse or press a key. Turn it off in Settings → **Doze when I'm away**.
 - **It doesn't start with Windows** — check the tray menu or Settings, and **Task Manager → Startup apps** (it may be disabled there). It's only available in the installed or portable app.
-- **Start over with a clean slate** — quit from the tray, then rename or delete `companions.json` in the data folder. The app starts with default settings and one companion.
+- **Start over with a clean slate** — Settings → **Delete all data…** (or quit from the tray, then rename or delete `companions.json` in the data folder). The app starts with default settings and one companion.
 - **"Your companions file couldn't be read"** — `companions.json` was damaged (for example by a typo while editing it). The app started with defaults and kept the damaged file next to it as `companions.corrupt-<date>.json`. Fix that file and rename it back to `companions.json` (with the app closed) to restore your companions.
 
 ## Known limitations

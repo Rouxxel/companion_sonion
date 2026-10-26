@@ -6,6 +6,15 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+### Added
+
+- Settings → **Delete all data…**: after confirmation, quits and deletes the data folder (companions, layouts, settings, cached assets) so the app starts fresh
+
+### Changed
+
+- Internal: the code is now shared with the macOS app (`standalone_desktop_version/shared`); no change in behavior
+- ⌘⌫ / Win+Backspace also removes the focused companion (for Mac keyboards; Delete still works)
+
 ## [0.2.0] - 2026-10-24
 
 First release with a Windows installer. Existing `companions.json` files from 0.1.0 load unchanged.
