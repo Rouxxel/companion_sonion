@@ -51,7 +51,13 @@
     },
     "zip": {
       "artifactName": "SonionCompanion-${version}-${arch}-mac.${ext}"
-    }
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/Rouxxel/companion_sonion/releases/download/desktop-latest"
+      }
+    ]
   },
   "dependencies": {
     "@sonion/companion-core": "*"
