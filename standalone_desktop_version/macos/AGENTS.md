@@ -6,8 +6,11 @@
 
 - `npm install` / `npm test` at the workspace root (unit tests run on any OS)
 - `npm run typecheck` (in `macos/`) — builds the shared core and type-checks the macOS code; works on Windows too
-- `npm start`, `npm run package:dir`, `npm run package` — **need macOS** (electron-builder can't build macOS targets on Windows/Linux)
-- No local Mac: run the GitHub Actions workflow **Desktop macOS (dev build)** (`.github/workflows/desktop-macos.yml`, manual). It runs the tests, builds an ad-hoc-signed arm64 app, launches it, checks that opening it again keeps one main process, and uploads screenshots + the zipped app
+- `npm start`, `npm run package:dir`, `npm run package`, `npm run package:signed` — **need macOS** (electron-builder can't build macOS targets on Windows/Linux)
+  - `package` / `package:dir`: ad-hoc signed (`-c.mac.identity=-`), notarization off — for development and CI dev builds
+  - `package:signed`: `scripts/check-signing-env.mjs` first (fails without a Developer ID identity source and a complete notarization credential set), then `electron-builder --mac -c.forceCodeSigning=true`; notarization runs automatically because the credentials are in the environment (`mac.notarize: true`)
+  - `npm run verify:signature -- "<app>" [--release]`: codesign (+ `spctl`, `stapler`, Developer ID authority with `--release`)
+- No local Mac: GitHub Actions workflow **Desktop macOS** (`.github/workflows/desktop-macos.yml`, manual). Default job `dev`: tests, ad-hoc arm64 app, launch from /Applications, single-instance + Open at Login first-run check, screenshots + zipped app. Input `signed`: job `signed` builds/signs/notarizes arm64 + x64 with the repository secrets `MACOS_CERTIFICATE_P12_BASE64`, `MACOS_CERTIFICATE_PASSWORD`, `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER` and verifies with `--release`
 
 ## Where code lives
 
@@ -23,6 +26,8 @@
 - Move to Applications (`src/move-to-applications.ts`): prompt after ready when packaged outside /Applications; "Don't Ask Again" lives in `macos-preferences.json` (macOS-only, not in `companions.json`)
 - `SONION_MAC_PANEL=1` switches companion windows to `type: "panel"` (evaluation only; via `PlatformAdapter.companionWindowOptions`)
 - Updates are not implemented yet (adapter returns unavailable)
-- Never commit certificates, Apple IDs, app-specific passwords or API keys (signing/notarization come via CI secrets)
+- Never commit certificates, Apple IDs, app-specific passwords or API keys (signing/notarization come via CI secrets); never echo them in scripts or workflow logs
+- Hardened runtime is on with `resources/build/entitlements.mac.plist` (allow-jit, allow-unsigned-executable-memory, disable-library-validation — the last one is required for ad-hoc builds). Don't add entitlements without a reason; notarization rejects some
+- The `.dmg` itself isn't signed or stapled; the app inside is (Gatekeeper checks the app). Verify the `.app`, not the `.dmg`
 - `ELECTRON_RUN_AS_NODE=1` in the environment makes Electron start as plain Node (`app` undefined) — unset it
 - User-facing changes: update `README.md` and `CHANGELOG.md` `[Unreleased]` in the same change

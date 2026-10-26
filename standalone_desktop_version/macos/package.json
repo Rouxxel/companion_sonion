@@ -11,8 +11,10 @@
     "start": "npm run build && electron .",
     "typecheck": "npm --prefix ../shared run build && tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --test --test-reporter=spec \"dist/test/**/*.test.js\"",
-    "package:dir": "npm run build && electron-builder --mac --dir",
-    "package": "npm run build && electron-builder --mac"
+    "package:dir": "npm run build && electron-builder --mac --dir \"-c.mac.identity=-\" -c.mac.notarize=false",
+    "package": "npm run build && electron-builder --mac \"-c.mac.identity=-\" -c.mac.notarize=false",
+    "package:signed": "node scripts/check-signing-env.mjs && npm run build && electron-builder --mac -c.forceCodeSigning=true",
+    "verify:signature": "sh scripts/verify-signature.sh"
   },
   "build": {
     "appId": "com.sonion.companion",
@@ -37,7 +39,12 @@
       ],
       "extendInfo": {
         "LSUIElement": true
-      }
+      },
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "resources/build/entitlements.mac.plist",
+      "entitlementsInherit": "resources/build/entitlements.mac.plist",
+      "notarize": true
     },
     "dmg": {
       "artifactName": "SonionCompanion-${version}-${arch}.${ext}"

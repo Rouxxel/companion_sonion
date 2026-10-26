@@ -2,11 +2,17 @@
 
 Floating desktop companions for macOS: transparent, frameless windows showing a PNG, JPEG, GIF, WebP, BMP, SVG or WebM asset that float above other apps, on every Space and over full-screen apps. The app lives in the **menu bar** (no Dock icon). Features and settings are the same as the Windows app.
 
-> **Status: development build.** There is no signed `.dmg` yet; run it from source or use the unsigned development build from CI (see below). Updates aren't available yet.
+> **Status: pre-release.** Signed `.dmg` downloads appear once the release pipeline has the Apple signing credentials; until then, run it from source or use the development build from CI (see below). Updates aren't available yet.
 
 ## Requirements
 
 - macOS 12 Monterey or later (Electron 43), Apple silicon or Intel.
+
+## Install
+
+1. Download the disk image for your Mac: `SonionCompanion-<version>-arm64.dmg` (Apple silicon: M1 or newer) or `SonionCompanion-<version>-x64.dmg` (Intel). Not sure? Apple menu → About This Mac → *Chip* (Apple M…) means arm64.
+2. Open it and drag **Sonion Companion** onto **Applications**.
+3. Open it from Applications or Launchpad. Release builds are signed and notarized by Apple, so macOS opens them without warnings.
 
 ## Run
 
@@ -29,7 +35,7 @@ Quit Sonion Companion from the menu-bar menu, then drag it from Applications to 
 
 ### Development build from CI (unsigned)
 
-The GitHub Actions workflow **Desktop macOS (dev build)** (run it manually from the Actions tab) builds the app on a Mac runner, launches it, and uploads screenshots plus `SonionCompanion-dev-arm64.zip` (Apple silicon). The app is only ad-hoc signed, so macOS blocks it when it's downloaded: unzip it, then right-click **Sonion Companion** → **Open** → **Open** (or allow it in System Settings → Privacy & Security).
+The GitHub Actions workflow **Desktop macOS** (run it manually from the Actions tab, leaving *signed* unchecked) builds the app on a Mac runner, launches it, and uploads screenshots plus `SonionCompanion-dev-arm64.zip` (Apple silicon). The app is only ad-hoc signed, so macOS blocks it when it's downloaded: unzip it, then right-click **Sonion Companion** → **Open** → **Open** (or allow it in System Settings → Privacy & Security).
 
 ## Controls
 
@@ -69,8 +75,25 @@ npm test                  # unit tests (shared core + platforms)
 cd macos
 npm start                 # build and launch from source (needs a Mac)
 npm run typecheck         # works on any OS
-npm run package:dir       # unpacked app in release/ (needs a Mac)
+npm run package:dir       # unpacked app in release/ (needs a Mac; ad-hoc signed)
+npm run package           # .dmg + .zip, arm64 + x64 (needs a Mac; ad-hoc signed, not notarized)
+npm run package:signed    # release build: Developer ID–signed + notarized (needs a Mac and credentials, see below)
+npm run verify:signature -- "release/mac-arm64/Sonion Companion.app" --release   # codesign + Gatekeeper + notarization checks
 ```
+
+### Release builds: signing and notarization
+
+Release builds are signed with a **Developer ID Application** certificate and **notarized** by Apple, so Gatekeeper opens them without warnings. They're built by the **Desktop macOS** workflow with *signed* checked. It needs an Apple Developer Program membership and these repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | What it is |
+| ------ | ---------- |
+| `MACOS_CERTIFICATE_P12_BASE64` | Developer ID Application certificate with its private key, exported from Keychain Access as `.p12`, then base64-encoded (`base64 -i cert.p12 \| pbcopy`) |
+| `MACOS_CERTIFICATE_PASSWORD` | Password chosen when exporting the `.p12` |
+| `APPLE_API_KEY_P8` | Content of the App Store Connect API key file `AuthKey_XXXXXXXXXX.p8` (Users and Access → Integrations → App Store Connect API, role *Developer*) |
+| `APPLE_API_KEY_ID` | That key's ID |
+| `APPLE_API_ISSUER` | The issuer ID shown on the same page |
+
+The workflow writes the key to a temporary file, runs `npm run package:signed` (which stops with a clear message if anything is missing instead of producing an unsigned release), checks both apps with `codesign`, `spctl` and `stapler`, and uploads the `.dmg`, `.zip` and `.blockmap` files. To build locally on a Mac instead: put the certificate in your keychain (or set `CSC_LINK`/`CSC_KEY_PASSWORD`) and set `APPLE_API_KEY` (path to the `.p8`), `APPLE_API_KEY_ID` and `APPLE_API_ISSUER`. Never commit certificates or keys.
 
 Project layout:
 
@@ -79,6 +102,7 @@ Project layout:
 - `src/login-item.ts` (+ `login-item-state.ts`, unit-tested) — Open at Login; `src/move-to-applications.ts` — the move prompt
 - `SONION_MAC_PANEL=1 npm start` — try companions as non-activating panels (they never take focus from the app you're using); evaluation switch, off by default
 - `resources/assets/` — default companion image, `trayTemplate.png` / `trayTemplate@2x.png` (black + alpha)
-- `resources/build/icon.png` — 1024 × 1024 app icon (electron-builder turns it into `.icns`)
+- `resources/build/icon.png` — 1024 × 1024 app icon (electron-builder turns it into `.icns`); `entitlements.mac.plist` — hardened-runtime exceptions Electron needs
+- `scripts/check-signing-env.mjs` — guard for `package:signed`; `scripts/verify-signature.sh` — signature/Gatekeeper/notarization checks
 
 If `npm start` fails with `Cannot read properties of undefined (reading 'getPath')`, the environment variable `ELECTRON_RUN_AS_NODE` is set (some editors set it for their terminals); run `unset ELECTRON_RUN_AS_NODE` and try again.

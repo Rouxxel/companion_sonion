@@ -17,3 +17,4 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Open at Login: on by default when the app first runs from Applications; turning it off (menu-bar menu, Settings, System Settings → Login Items) is respected; shows when macOS is waiting for your approval; Settings doesn't open when started at login
 - Offers to move itself to the Applications folder when opened from the disk image or Downloads (with *Don't Ask Again*)
 - Settings → **Delete all data…** quits and deletes your companions, layouts, settings and cached assets
+- Disk images for Apple silicon (`…-arm64.dmg`) and Intel (`…-x64.dmg`); release builds are signed with a Developer ID certificate and notarized by Apple (hardened runtime)
