@@ -1,0 +1,26 @@
+{
+  "name": "@sonion/companion-core",
+  "version": "0.0.0",
+  "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "description": "Platform-neutral core of the Sonion Companion desktop apps (main process, renderer pages, data model).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "renderer"
+  ],
+  "scripts": {
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "test": "node -e \"require('fs').rmSync('build-test',{recursive:true,force:true})\" && tsc -p tsconfig.test.json && node --test --test-reporter=spec \"build-test/test/**/*.test.js\""
+  },
+  "dependencies": {
+    "electron-updater": "6.8.10"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "electron": "43.7.9",
+    "typescript": "5.9.3"
+  }
+}

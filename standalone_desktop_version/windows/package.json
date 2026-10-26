@@ -1,28 +1,35 @@
 {
   "name": "companion-sonion-desktop",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "license": "PolyForm-Noncommercial-1.0.0",
   "description": "A minimal, taskbar-free desktop companion player.",
+  "author": "Rouxxel",
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json && node scripts/copy-static.mjs",
+    "build": "npm --prefix ../shared run build && node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json && node scripts/copy-static.mjs",
     "start": "npm run build && electron .",
     "dev": "npm run start",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "package": "npm run build && electron-builder --win",
-    "package:portable": "npm run build && electron-builder --win portable"
+    "typecheck": "npm --prefix ../shared run build && tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test --test-reporter=spec \"dist/test/**/*.test.js\"",
+    "test:install": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-install.ps1",
+    "package": "npm run build && electron-builder --win nsis",
+    "package:portable": "npm run build && electron-builder --win portable",
+    "package:dir": "npm run build && electron-builder --win --dir"
   },
   "build": {
     "appId": "com.sonion.companion",
     "productName": "Sonion Companion",
+    "copyright": "Copyright © 2026 Rouxxel",
     "directories": {
       "output": "release",
-      "buildResources": "build"
+      "buildResources": "resources/build"
     },
     "files": [
       "dist/**/*",
-      "package.json"
+      "!dist/test/**",
+      "package.json",
+      "!**/node_modules/@sonion/companion-core/{src,build-test,tsconfig*.json,.gitignore}"
     ],
     "win": {
       "target": [
@@ -33,20 +40,37 @@
           ]
         }
       ],
-      "icon": "build/icon.png"
+      "icon": "resources/build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Sonion Companion"
-    }
+      "shortcutName": "Sonion Companion",
+      "uninstallDisplayName": "Sonion Companion",
+      "artifactName": "SonionCompanion-Setup-${version}.${ext}",
+      "include": "resources/build/installer.nsh",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "SonionCompanion-Portable-${version}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/Rouxxel/companion_sonion/releases/download/desktop-latest"
+      }
+    ]
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "electron": "^43.1.1",
-    "electron-builder": "^26.5.0",
-    "typescript": "^5.8.0"
+    "@types/node": "22.20.1",
+    "electron": "43.7.9",
+    "electron-builder": "26.15.3",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@sonion/companion-core": "*"
   }
 }

@@ -1,0 +1,68 @@
+{
+  "name": "sonion-companion-macos",
+  "version": "0.3.0",
+  "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "description": "Floating desktop companions for macOS.",
+  "author": "Rouxxel",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "npm --prefix ../shared run build && node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json && node scripts/copy-static.mjs",
+    "start": "npm run build && electron .",
+    "typecheck": "npm --prefix ../shared run build && tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test --test-reporter=spec \"dist/test/**/*.test.js\"",
+    "package:dir": "npm run build && electron-builder --mac --dir \"-c.mac.identity=-\" -c.mac.notarize=false",
+    "package": "npm run build && electron-builder --mac \"-c.mac.identity=-\" -c.mac.notarize=false",
+    "package:signed": "node scripts/check-signing-env.mjs && npm run build && electron-builder --mac -c.forceCodeSigning=true",
+    "verify:signature": "sh scripts/verify-signature.sh"
+  },
+  "build": {
+    "appId": "com.sonion.companion",
+    "productName": "Sonion Companion",
+    "copyright": "Copyright © 2026 Rouxxel",
+    "directories": {
+      "output": "release",
+      "buildResources": "resources/build"
+    },
+    "files": [
+      "dist/**/*",
+      "!dist/test/**",
+      "package.json",
+      "!**/node_modules/@sonion/companion-core/{src,build-test,tsconfig*.json,.gitignore}"
+    ],
+    "mac": {
+      "category": "public.app-category.entertainment",
+      "icon": "resources/build/icon.png",
+      "target": [
+        { "target": "dmg", "arch": ["universal"] },
+        { "target": "zip", "arch": ["universal"] }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "resources/build/entitlements.mac.plist",
+      "entitlementsInherit": "resources/build/entitlements.mac.plist",
+      "notarize": true
+    },
+    "dmg": {
+      "artifactName": "SonionCompanion-${version}-${arch}.${ext}"
+    },
+    "zip": {
+      "artifactName": "SonionCompanion-${version}-${arch}-mac.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/Rouxxel/companion_sonion/releases/download/desktop-latest"
+      }
+    ]
+  },
+  "dependencies": {
+    "@sonion/companion-core": "*"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "electron": "43.7.9",
+    "electron-builder": "26.15.3",
+    "typescript": "5.9.3"
+  }
+}

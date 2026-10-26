@@ -5,7 +5,6 @@
   /** @typedef {{
    * moveBy?: (delta: { x: number, y: number }) => Promise<void> | void,
    * resize?: (delta: number) => Promise<void> | void,
-   * setHoverOpacity?: (opacity: number) => Promise<void> | void,
    * toggleLock?: () => Promise<CompanionState | void> | CompanionState | void,
    * remove?: () => Promise<void> | void,
    * chooseLocalAsset?: () => Promise<CompanionState | void> | CompanionState | void,
@@ -27,12 +26,18 @@
   const urlError = document.querySelector("#url-error");
   const lockButton = document.querySelector('[data-action="toggle-lock"]');
   const onTopButton = document.querySelector('[data-action="toggle-on-top"]');
+  const opacitySlider = document.querySelector("#companion-opacity");
+  const opacityValue = document.querySelector("#companion-opacity-value");
 
   let locked = false;
   let alwaysOnTop = false;
   let dragging = false;
   let lastPointer = null;
   let menuOpen = false;
+  let hovered = false;
+  /** Companion opacity when not hovered, and the Settings → Hover opacity value. */
+  let baseOpacity = 1;
+  let hoverOpacity = 0.3;
 
   const call = async (name, ...args) => {
     const method = bridge[name];
@@ -51,9 +56,15 @@
     }
     if (typeof state.assetUrl === "string" && state.assetUrl) setAsset(state.assetUrl);
     if (typeof state.opacity === "number") {
-      image.style.opacity = String(state.opacity);
-      video.style.opacity = String(state.opacity);
+      baseOpacity = state.opacity;
+      opacitySlider.value = String(Math.round(baseOpacity * 100));
+      opacityValue.textContent = `${opacitySlider.value}%`;
     }
+    if (state.settings && typeof state.settings.hoverOpacity === "number") hoverOpacity = state.settings.hoverOpacity;
+    // Idle sleep (Windows reported no input for a while): dimmed, slowly breathing, with "z z"
+    if (typeof state.sleeping === "boolean") main.classList.toggle("sleeping", state.sleeping);
+    image.style.opacity = String(hovered && !menuOpen ? hoverOpacity : baseOpacity);
+    video.style.opacity = image.style.opacity;
   };
 
   const setAsset = (assetPath) => {
@@ -162,13 +173,12 @@
     void call("resize", event.deltaY < 0 ? 12 : -12);
   }, { passive: false });
 
-  const setHoverOpacity = (opacity) => {
+  const setOpacity = (opacity) => {
     image.style.opacity = String(opacity);
     video.style.opacity = String(opacity);
-    void call("setHoverOpacity", opacity);
   };
-  main.addEventListener("mouseenter", () => { if (!menuOpen) setHoverOpacity(0.3); });
-  main.addEventListener("mouseleave", () => { if (!dragging) setHoverOpacity(1); });
+  main.addEventListener("mouseenter", () => { hovered = true; if (!menuOpen) setOpacity(hoverOpacity); });
+  main.addEventListener("mouseleave", () => { hovered = false; if (!dragging) setOpacity(baseOpacity); });
   main.addEventListener("contextmenu", showMenu);
   image.addEventListener("error", () => void call("reportAssetError"));
   video.addEventListener("error", () => void call("reportAssetError"));
@@ -191,6 +201,15 @@
     const vw = video.videoWidth;
     const vh = video.videoHeight;
     if (vw && vh) void call("reportAspectRatio", { width: vw, height: vh });
+  });
+
+  // Per-companion resting opacity: preview while dragging the slider, save on release
+  opacitySlider.addEventListener("input", () => {
+    opacityValue.textContent = `${opacitySlider.value}%`;
+    image.style.opacity = video.style.opacity = String(Number(opacitySlider.value) / 100);
+  });
+  opacitySlider.addEventListener("change", async () => {
+    applyState(await call("setOpacity", Number(opacitySlider.value) / 100));
   });
 
   menu.addEventListener("click", async (event) => {
@@ -231,7 +250,8 @@
   document.addEventListener("keydown", async (event) => {
     if (event.key === "Escape") { hideMenu(); hideUrlDialog(); return; }
     if (!urlDialog.hidden) return;
-    if (event.key === "Delete") { event.preventDefault(); await call("remove"); }
+    // Delete, or ⌘⌫ (Mac keyboards' "delete" key is Backspace)
+    if (event.key === "Delete" || (event.metaKey && event.key === "Backspace")) { event.preventDefault(); await call("remove"); }
     if (event.key.toLowerCase() === "l") applyState(await call("toggleLock"));
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "o") { event.preventDefault(); applyState(await call("chooseLocalAsset")); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "u") { event.preventDefault(); showUrlDialog(); }
