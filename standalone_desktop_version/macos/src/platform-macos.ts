@@ -1,6 +1,8 @@
 import { app, Menu, nativeImage } from "electron";
 import path from "node:path";
 import { launchedAtLogin, PlatformAdapter, PRODUCT_NAME } from "@sonion/companion-core";
+import { loginItem } from "./login-item";
+import { offerMoveToApplications } from "./move-to-applications";
 
 const assetsDir = path.join(__dirname, "assets");
 
@@ -47,7 +49,12 @@ export const macPlatform: PlatformAdapter = {
     ]));
     // macOS delivers "open the app again" (Finder, Launchpad, Spotlight) as `activate`, not `second-instance`.
     app.on("activate", () => ctx.showSettings());
+    // Running from the DMG or Downloads: offer to move into /Applications (login item and updates need it).
+    void offerMoveToApplications();
   },
+  // Evaluation switch: SONION_MAC_PANEL=1 makes companions non-activating panels (never steal focus from the
+  // app you're using). Off by default until keyboard shortcuts in companion windows are verified with it.
+  companionWindowOptions: () => (process.env.SONION_MAC_PANEL === "1" ? { type: "panel" } : {}),
   focusApp: () => app.focus({ steal: true }),
   applyAlwaysOnTop(window, alwaysOnTop) {
     // Companions follow you to every Space and stay visible over full-screen apps.
@@ -55,15 +62,8 @@ export const macPlatform: PlatformAdapter = {
     if (alwaysOnTop) window.setAlwaysOnTop(true, "floating");
     else window.setAlwaysOnTop(false);
   },
-  // Login item support (`wasOpenedAtLogin`) arrives with "Open at Login"; `--autostart` keeps parity with the other platforms.
+  // Started as a login item: don't open Settings. (`--autostart` keeps parity with the other platforms.)
   launchedAtLogin: () => launchedAtLogin() || app.getLoginItemSettings().wasOpenedAtLogin === true,
-  autostart: {
-    label: "Open at Login",
-    available: () => false,
-    isEnabled: () => false,
-    setEnabled: () => false,
-    note: () => "Not available yet in this version.",
-    initialize: (manager) => { manager.updateSettings({ startWithWindows: false }); }
-  },
+  autostart: loginItem,
   updatesAvailable: () => false
 };
