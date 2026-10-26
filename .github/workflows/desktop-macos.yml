@@ -44,10 +44,14 @@ jobs:
           codesign --verify --deep --strict --verbose=2 "$APP"
           /usr/libexec/PlistBuddy -c "Print :LSUIElement" "$APP/Contents/Info.plist"
 
-      - name: Launch and take screenshots
+      - name: Launch from /Applications and take screenshots
         working-directory: standalone_desktop_version/macos
         run: |
-          APP="release/mac-arm64/Sonion Companion.app"
+          # Run from /Applications like a user would (outside it, the app offers to move itself there).
+          rm -rf "/Applications/Sonion Companion.app"
+          ditto "release/mac-arm64/Sonion Companion.app" "/Applications/Sonion Companion.app"
+          APP="/Applications/Sonion Companion.app"
+          DATA="$HOME/Library/Application Support/Sonion Companion"
           mkdir -p screenshots
           "$APP/Contents/MacOS/Sonion Companion" > screenshots/app.log 2>&1 &
           sleep 20
@@ -57,9 +61,15 @@ jobs:
           sleep 10
           screencapture -x screenshots/2-opened-again.png
           MAIN_PROCESSES=$(pgrep -f "Sonion Companion.app/Contents/MacOS/Sonion Companion$" | wc -l | tr -d ' ')
-          echo "Main processes after opening again: $MAIN_PROCESSES" | tee screenshots/result.txt
-          ls -la "$HOME/Library/Application Support/Sonion Companion" | tee -a screenshots/result.txt
+          {
+            echo "Main processes after opening again: $MAIN_PROCESSES"
+            echo "Open at Login after first launch (startWithWindows / autostartInitialized):"
+            node -e "const s=require(process.argv[1]).settings; console.log(s.startWithWindows, s.autostartInitialized)" "$DATA/companions.json"
+            ls -la "$DATA"
+          } | tee screenshots/result.txt
           pkill -f "Sonion Companion.app/Contents/MacOS" || true
+          # Leave the runner clean: remove the login item registration together with the app.
+          rm -rf "/Applications/Sonion Companion.app"
           test "$MAIN_PROCESSES" = "1"
 
       - name: Zip the app for download
