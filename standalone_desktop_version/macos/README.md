@@ -2,7 +2,7 @@
 
 Floating desktop companions for macOS: transparent, frameless windows showing a PNG, JPEG, GIF, WebP, BMP, SVG or WebM asset that float above other apps, on every Space and over full-screen apps. The app lives in the **menu bar** (no Dock icon). Features and settings are the same as the Windows app.
 
-> **Status: pre-release.** Signed `.dmg` downloads appear once the release pipeline has the Apple signing credentials; until then, run it from source or use the development build from CI (see below). Updates aren't available yet.
+> **Status: pre-release.** Signed `.dmg` downloads appear once the release pipeline has the Apple signing credentials; until then, run it from source or use the development build from CI (see below).
 
 ## Requirements
 
@@ -28,6 +28,10 @@ Keep the app in **Applications**: Open at Login and updates only work from there
 ### Open at Login
 
 The app opens automatically when you log in. It turns this on the first time you open it from Applications. Turn it off with **Open at Login** in the menu-bar menu or in Settings, or in **System Settings → General → Login Items**; your choice is kept and the app never turns it back on by itself. If Settings says it's *waiting for your approval*, allow Sonion Companion under System Settings → General → Login Items. When started at login, the app doesn't open Settings.
+
+### Updates
+
+Choose **Check for Updates…** in the menu-bar menu (or **Check for updates** at the bottom of Settings). If a newer version exists, the app asks before downloading it, then offers to restart now or install it when you quit. It never checks in the background. Updates work for the signed app in Applications; in development builds the item is greyed out. Your companions, layouts and Open at Login choice are kept.
 
 ### Uninstall
 
@@ -62,6 +66,8 @@ Mouse: drag to move, scroll over a companion to resize, right-click (or Control-
 - **Open at Login is greyed out** — the app isn't in the Applications folder (or runs from source). Move it to Applications.
 - **"Waiting for your approval"** — System Settings → General → Login Items → allow Sonion Companion.
 - **No menu-bar icon** — on a crowded menu bar it may be hidden behind the notch or by a menu-bar manager. Open the app again to show Settings.
+- **Check for Updates… is greyed out** — updates need the signed release build in the Applications folder (development builds can't update themselves).
+- **"Couldn't check for updates"** — "No update has been published yet" means there's nothing newer; otherwise check your internet connection.
 - **Companions look greyed out with "z z"** — they're dozing because you've been away; move the mouse or press a key. Settings → **Doze when I'm away** turns it off.
 
 ## Development
@@ -93,7 +99,21 @@ Release builds are signed with a **Developer ID Application** certificate and **
 | `APPLE_API_KEY_ID` | That key's ID |
 | `APPLE_API_ISSUER` | The issuer ID shown on the same page |
 
-The workflow writes the key to a temporary file, runs `npm run package:signed` (which stops with a clear message if anything is missing instead of producing an unsigned release), checks both apps with `codesign`, `spctl` and `stapler`, and uploads the `.dmg`, `.zip` and `.blockmap` files. To build locally on a Mac instead: put the certificate in your keychain (or set `CSC_LINK`/`CSC_KEY_PASSWORD`) and set `APPLE_API_KEY` (path to the `.p8`), `APPLE_API_KEY_ID` and `APPLE_API_ISSUER`. Never commit certificates or keys.
+The workflow writes the key to a temporary file, runs `npm run package:signed` (which stops with a clear message if anything is missing instead of producing an unsigned release), checks both apps with `codesign`, `spctl` and `stapler`, runs the smoke test on the arm64 `.dmg`, and uploads the `.dmg`, `.zip`, `.blockmap` files and `latest-mac.yml`.
+
+### Publishing an update
+
+The updater reads `latest-mac.yml` from the GitHub release **`desktop-latest`** (the same release the Windows app uses; each platform has its own `latest*.yml`). To publish version X.Y.Z:
+
+1. Set `"version"` in `package.json` (same version as the other desktop apps built from that commit) and add a `CHANGELOG.md` entry.
+2. Run **Desktop macOS** with *signed* and *publish* checked. After the signed build and its checks pass, the `publish` job waits for approval in the **`desktop-release`** environment (add yourself as a required reviewer under Settings → Environments once). It then uploads the `.dmg`, `.zip`, `.blockmap` files and `latest-mac.yml`, and removes the previous macOS files. Windows and Linux files in the release aren't touched; the release is a pre-release, so it never becomes the repository's "Latest".
+3. In an older installed copy: menu-bar menu → **Check for Updates…**.
+
+The `.zip` files are what the updater downloads (Apple silicon and Intel each get their own); the `.dmg` files are for new installs.
+
+### Smoke test
+
+`bash scripts/smoke-macos.sh <SonionCompanion-…-arm64.dmg> [--release]` mounts the disk image, installs the app into Applications, verifies the signature (with `--release`: Developer ID, Gatekeeper, notarization), launches it (checks one process, data folder, Open at Login turned on at first launch, menu-bar app type, login item via `sfltool` when `sudo` works without a password), opens it again (still one process), quits and uninstalls (data kept). It moves your data folder aside first and restores it, refuses to replace an existing installation unless `FORCE=1`, and saves screenshots when `SCREENSHOT_DIR` is set. CI runs it on every build. To build locally on a Mac instead: put the certificate in your keychain (or set `CSC_LINK`/`CSC_KEY_PASSWORD`) and set `APPLE_API_KEY` (path to the `.p8`), `APPLE_API_KEY_ID` and `APPLE_API_ISSUER`. Never commit certificates or keys.
 
 Project layout:
 
@@ -103,6 +123,7 @@ Project layout:
 - `SONION_MAC_PANEL=1 npm start` — try companions as non-activating panels (they never take focus from the app you're using); evaluation switch, off by default
 - `resources/assets/` — default companion image, `trayTemplate.png` / `trayTemplate@2x.png` (black + alpha)
 - `resources/build/icon.png` — 1024 × 1024 app icon (electron-builder turns it into `.icns`); `entitlements.mac.plist` — hardened-runtime exceptions Electron needs
-- `scripts/check-signing-env.mjs` — guard for `package:signed`; `scripts/verify-signature.sh` — signature/Gatekeeper/notarization checks
+- `scripts/check-signing-env.mjs` — guard for `package:signed`; `scripts/verify-signature.sh` — signature/Gatekeeper/notarization checks; `scripts/smoke-macos.sh` — install round trip
+- `src/code-signature.ts` — detects a Developer ID–signed app (updates are enabled only then)
 
 If `npm start` fails with `Cannot read properties of undefined (reading 'getPath')`, the environment variable `ELECTRON_RUN_AS_NODE` is set (some editors set it for their terminals); run `unset ELECTRON_RUN_AS_NODE` and try again.

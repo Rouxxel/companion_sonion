@@ -206,10 +206,10 @@ The updater looks for the files of the GitHub release with the fixed tag **`desk
 
 1. Set `"version"` in `package.json` and add a `CHANGELOG.md` entry.
 2. `npm run package`. Besides `SonionCompanion-Setup-X.Y.Z.exe`, this writes `SonionCompanion-Setup-X.Y.Z.exe.blockmap` and `latest.yml` to `release/` (or to the out-of-tree folder, see [Build problems](#build-problems)).
-3. Upload those **three files** to the `desktop-latest` release and remove the previous version's files. Optionally also keep a versioned release such as `desktop-vX.Y.Z`. With the GitHub CLI:
+3. Upload those **three files** to the `desktop-latest` release and remove the previous version's **Windows** files (`SonionCompanion-Setup-*`). The release also holds the macOS app's files (`latest-mac.yml`, `*.dmg`, `*-mac.zip`); leave those alone. Optionally also keep a versioned release such as `desktop-vX.Y.Z`. With the GitHub CLI:
 
    ```powershell
-   gh release create desktop-latest --title "Sonion Companion (Windows) — latest" --notes "See CHANGELOG.md" --prerelease   # first time only
+   gh release create desktop-latest --title "Sonion Companion (desktop) — latest" --notes "Latest desktop builds. See each platform's CHANGELOG.md." --prerelease   # first time only (the macOS workflow may already have created it)
    gh release upload desktop-latest release\latest.yml release\SonionCompanion-Setup-X.Y.Z.exe release\SonionCompanion-Setup-X.Y.Z.exe.blockmap --clobber
    ```
 

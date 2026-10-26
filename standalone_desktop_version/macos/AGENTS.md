@@ -25,7 +25,9 @@
 - Open at Login (`src/login-item.ts`): only for the packaged app in /Applications; first-run default on (`autostartInitialized`), macOS is the source of truth afterwards; `requires-approval` counts as on with a Settings note. State logic is pure in `login-item-state.ts` (unit tests run on any OS: `npm test` in `macos/`)
 - Move to Applications (`src/move-to-applications.ts`): prompt after ready when packaged outside /Applications; "Don't Ask Again" lives in `macos-preferences.json` (macOS-only, not in `companions.json`)
 - `SONION_MAC_PANEL=1` switches companion windows to `type: "panel"` (evaluation only; via `PlatformAdapter.companionWindowOptions`)
-- Updates are not implemented yet (adapter returns unavailable)
+- Updates: shared `updater.ts`; generic feed `desktop-latest` (`build.publish`), channel file `latest-mac.yml` (lists the arm64 and x64 `-mac.zip`). `updatesAvailable` = packaged + in /Applications + Developer ID–signed (`src/code-signature.ts`, parsed from `codesign --display` stderr), because Squirrel.Mac refuses ad-hoc apps. Manual checks only
+- Publishing: CI `publish` job (inputs signed + publish, environment `desktop-release` with required reviewers) uploads with `gh release upload --clobber` and deletes only older macOS assets (`SonionCompanion-*-mac.zip`, `*.dmg`, their blockmaps). Never touch `latest.yml` / Windows or Linux files from the macOS workflow
+- Smoke test: `scripts/smoke-macos.sh <dmg> [--release]` (CI runs it in both jobs); it moves the data folder aside and restores it, removes the app at the end, `FORCE=1` to replace an existing install
 - Never commit certificates, Apple IDs, app-specific passwords or API keys (signing/notarization come via CI secrets); never echo them in scripts or workflow logs
 - Hardened runtime is on with `resources/build/entitlements.mac.plist` (allow-jit, allow-unsigned-executable-memory, disable-library-validation — the last one is required for ad-hoc builds). Don't add entitlements without a reason; notarization rejects some
 - The `.dmg` itself isn't signed or stapled; the app inside is (Gatekeeper checks the app). Verify the `.app`, not the `.dmg`
