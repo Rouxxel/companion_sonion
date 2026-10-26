@@ -32,4 +32,5 @@
 - Hardened runtime is on with `resources/build/entitlements.mac.plist` (allow-jit, allow-unsigned-executable-memory, disable-library-validation — the last one is required for ad-hoc builds). Don't add entitlements without a reason; notarization rejects some
 - The `.dmg` itself isn't signed or stapled; the app inside is (Gatekeeper checks the app). Verify the `.app`, not the `.dmg`
 - `ELECTRON_RUN_AS_NODE=1` in the environment makes Electron start as plain Node (`app` undefined) — unset it
-- User-facing changes: update `README.md` and `CHANGELOG.md` `[Unreleased]` in the same change
+- User-facing changes: update `README.md` and `CHANGELOG.md` `[Unreleased]` in the same change; shared changes also go into `../windows/README.md` / `CHANGELOG.md`
+- Releasing: same `version` in `windows/` and `macos/` for builds from the same commit; rename `[Unreleased]` to `[x.y.z] - YYYY-MM-DD` in each platform's CHANGELOG when its files are published to `desktop-latest`
