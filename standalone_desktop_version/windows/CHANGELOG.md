@@ -6,6 +6,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+Version 0.3.0, released together with the first macOS release.
+
 ### Added
 
 - Settings → **Delete all data…**: after confirmation, quits and deletes the data folder (companions, layouts, settings, cached assets) so the app starts fresh

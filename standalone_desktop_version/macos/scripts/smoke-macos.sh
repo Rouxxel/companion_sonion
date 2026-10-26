@@ -1,10 +1,10 @@
 #!/bin/bash
 # Installer round trip for Sonion Companion on macOS (meant for CI runners or a test Mac):
 # mount the .dmg -> copy the app to /Applications -> verify the signature -> first launch
-# (Open at Login turned on, no Dock icon) -> opening it again keeps one process -> quit ->
-# uninstall (data kept).
+# (Open at Login turned on, regular app with a Dock icon) -> opening it again keeps one process ->
+# quit -> uninstall (data kept).
 #
-# Usage: scripts/smoke-macos.sh <SonionCompanion-<version>-<arch>.dmg> [--release]
+# Usage: scripts/smoke-macos.sh <SonionCompanion-<version>-universal.dmg> [--release]
 #   --release        also require Developer ID signature, Gatekeeper acceptance and a notarization ticket
 #   FORCE=1          replace an existing /Applications/Sonion Companion.app (it is removed at the end)
 #   SCREENSHOT_DIR   if set, screenshots are saved there
@@ -58,8 +58,7 @@ rm -rf "$APP"
 INSTALLED=1
 check "copied to /Applications" ditto "$MOUNT/$APP_NAME" "$APP"
 hdiutil detach "$MOUNT" -quiet 2>/dev/null
-check "signature valid${MODE:+ ($MODE)}" sh "$SCRIPT_DIR/verify-signature.sh" "$APP" $MODE
-check "LSUIElement (no Dock icon) set" /usr/libexec/PlistBuddy -c "Print :LSUIElement" "$APP/Contents/Info.plist"
+check "universal binary, signature valid, no LSUIElement${MODE:+ ($MODE)}" sh "$SCRIPT_DIR/verify-signature.sh" "$APP" $MODE
 
 echo "== First launch"
 "$APP/Contents/MacOS/Sonion Companion" >/tmp/sonion-smoke.log 2>&1 &
@@ -70,7 +69,7 @@ check "data folder created" test -f "$DATA/companions.json"
 check "Open at Login turned on at first launch (startWithWindows=$(setting startWithWindows))" test "$(setting startWithWindows)" = "true"
 check "first-run flag recorded (autostartInitialized=$(setting autostartInitialized))" test "$(setting autostartInitialized)" = "true"
 if command -v lsappinfo >/dev/null; then
-  check "runs as a menu-bar app (UIElement)" sh -c "lsappinfo info -only ApplicationType 'Sonion Companion' | grep -q UIElement"
+  check "runs as a regular app with a Dock icon (Foreground)" sh -c "lsappinfo info -only ApplicationType 'Sonion Companion' | grep -q Foreground"
 fi
 if sudo -n true 2>/dev/null; then
   check "login item registered (sfltool)" sh -c "sudo -n sfltool dumpbtm 2>/dev/null | grep -q com.sonion.companion"

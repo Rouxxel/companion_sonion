@@ -1,6 +1,6 @@
 # Sonion Companion (macOS)
 
-Floating desktop companions for macOS: transparent, frameless windows showing a PNG, JPEG, GIF, WebP, BMP, SVG or WebM asset that float above other apps, on every Space and over full-screen apps. The app lives in the **menu bar** (no Dock icon). Features and settings are the same as in the Windows app, and exported companions move freely between both.
+Floating desktop companions for macOS: transparent, frameless windows showing a PNG, JPEG, GIF, WebP, BMP, SVG or WebM asset that float above other apps, on every Space and over full-screen apps. The app has a **Dock icon** and a **menu-bar icon**. Features and settings are the same as in the Windows app, and exported companions move freely between both.
 
 > **Status: pre-release.** Signed `.dmg` downloads appear once the release pipeline has the Apple signing credentials; until then, run it from source or use the development build from CI (see [Development](#development)).
 
@@ -8,7 +8,7 @@ Floating desktop companions for macOS: transparent, frameless windows showing a 
 
 **Requirements:** macOS 12 Monterey or later, Apple silicon or Intel.
 
-1. Download the disk image for your Mac: `SonionCompanion-<version>-arm64.dmg` (Apple silicon: M1 or newer) or `SonionCompanion-<version>-x64.dmg` (Intel). Not sure? Apple menu → About This Mac → *Chip* (Apple M…) means arm64.
+1. Download `SonionCompanion-<version>-universal.dmg` (for example `SonionCompanion-0.3.0-universal.dmg`). It's a universal app: the same download runs natively on Apple silicon and Intel Macs.
 2. Open it and drag **Sonion Companion** onto **Applications**.
 3. Open it from Applications or Launchpad. Release builds are signed and notarized by Apple, so macOS opens them without warnings.
 
@@ -24,9 +24,13 @@ Quit Sonion Companion from the menu-bar menu, then drag it from Applications to 
 
 ## Run
 
-Sonion Companion lives in the **menu bar** (a handshake icon that adapts to light and dark menu bars). Click it for Add companion, Settings, Open at Login, Check for Updates and Quit.
+Sonion Companion shows a **Dock icon** and a **menu-bar icon** (a handshake that adapts to light and dark menu bars):
 
-Only one copy runs at a time. Opening the app again (Finder, Launchpad, Spotlight) shows the **Settings** window of the running copy; **⌘,** opens it too. The first time you open it with no companions saved, Settings opens automatically. Companions never show up in the Dock or in ⌘-Tab.
+- **Click the Dock icon** to open Settings; right-click it for Add Companion and Settings (plus macOS's own Quit and Options → Keep in Dock).
+- **Click the menu-bar icon** for Add companion, Settings, Open at Login, Check for Updates and Quit.
+- The app appears in ⌘-Tab like any other app. Companion windows themselves don't get separate entries.
+
+Only one copy runs at a time. Opening the app again (Dock, Finder, Launchpad, Spotlight) shows the **Settings** window of the running copy; **⌘,** opens it too. The first time you open it with no companions saved, Settings opens automatically. Closing Settings doesn't quit the app; quit from the menu-bar menu, the Dock menu or ⌘Q.
 
 ## Features
 
@@ -41,7 +45,8 @@ Only one copy runs at a time. Opening the app again (Finder, Launchpad, Spotligh
 - **Lock/Unlock** — prevent accidental movement
 - **Local and remote assets** — pick a file or paste a URL; remote assets are cached after the first download
 - **Layouts**, **export / import** (files interchangeable with the Windows app) and **auto-save**
-- **Menu-bar app** with system-wide shortcuts, **Open at Login** and **manual updates**
+- **Dock and menu-bar icons**, system-wide shortcuts, **Open at Login** and **manual updates**
+- **Universal app** — one download for Apple silicon and Intel
 
 ## Controls
 
@@ -78,13 +83,14 @@ Only one copy runs at a time. Opening the app again (Finder, Launchpad, Spotligh
 
 The two system-wide shortcuts can be changed or turned off in Settings, which also shows whether each one is active (another app may already use a combination). Write them as Electron accelerators, e.g. `Command+Alt+Shift+A`.
 
-### Menu-bar menu
+### Menu-bar menu and Dock menu
 
-**Add companion**, **Settings**, **Open at Login** (checkbox), **Check for Updates…**, **Quit**.
+- Menu-bar icon: **Add companion**, **Settings**, **Open at Login** (checkbox), **Check for Updates…**, **Quit**.
+- Dock icon (right-click): **Add Companion**, **Settings…**, plus macOS's own items (Options, Show All Windows, Quit).
 
 ## Settings
 
-Open it with `⌘⌥⇧S`, `⌘,`, the menu-bar menu, or by opening the app again.
+Open it with `⌘⌥⇧S`, `⌘,`, the Dock icon, the menu-bar menu, or by opening the app again.
 
 - **Keep companions on top**, **Default / Minimum / Maximum size**, **Maximum companions**
 - **Opacity on hover** — 5–100 %, default 30 %; applies immediately
@@ -121,7 +127,7 @@ PNG, JPEG, GIF, WebP, BMP, SVG and WebM. Local files up to 25 MB, remote files u
 ## Troubleshooting
 
 - **"Sonion Companion can't be opened"** — only development builds show this (release builds are notarized). Right-click the app → **Open** → **Open**, or allow it in System Settings → Privacy & Security.
-- **Nothing seems to happen when I open it** — it's in the menu bar; on a crowded menu bar the icon may be hidden behind the notch or by a menu-bar manager. Open the app again to show Settings.
+- **No menu-bar icon** — on a crowded menu bar it may be hidden behind the notch or by a menu-bar manager. Use the Dock icon instead.
 - **Open at Login is greyed out** — the app isn't in the Applications folder (or runs from source). Move it to Applications.
 - **"Waiting for your approval"** — System Settings → General → Login Items → allow Sonion Companion.
 - **A shortcut doesn't work** — Settings shows *Not available* when another app already uses the combination; choose another one.
@@ -135,6 +141,7 @@ PNG, JPEG, GIF, WebP, BMP, SVG and WebM. Local files up to 25 MB, remote files u
 
 - macOS 12 or later (Electron 43).
 - Companions float at the "floating" window level: system UI (menus, Notification Center, screen savers) stays above them.
+- The Dock icon may blink briefly when companions are created (at launch, when adding one): that's macOS switching the window to "visible on all Spaces and over full-screen apps".
 - Updates require the signed build in Applications; development builds can't update themselves.
 - Very large GIFs may impact performance.
 
@@ -151,16 +158,16 @@ npm start                 # build and launch from source (needs a Mac)
 npm run typecheck         # works on any OS
 npm test                  # macOS unit tests (login item state, code signature parsing)
 npm run package:dir       # unpacked app in release/ (needs a Mac; ad-hoc signed)
-npm run package           # .dmg + .zip, arm64 + x64 (needs a Mac; ad-hoc signed, not notarized)
+npm run package           # universal .dmg + .zip (needs a Mac; ad-hoc signed, not notarized)
 npm run package:signed    # release build: Developer ID–signed + notarized (needs a Mac and credentials)
-npm run verify:signature -- "release/mac-arm64/Sonion Companion.app" --release   # codesign + Gatekeeper + notarization checks
+npm run verify:signature -- "release/mac-universal/Sonion Companion.app" --release   # architectures + codesign + Gatekeeper + notarization
 ```
 
 If `npm start` fails with `Cannot read properties of undefined (reading 'getPath')`, the environment variable `ELECTRON_RUN_AS_NODE` is set (some editors set it for their terminals); run `unset ELECTRON_RUN_AS_NODE` and try again.
 
 ### Development build from CI (no Mac needed)
 
-The GitHub Actions workflow **Desktop macOS** (Actions tab → Run workflow, *signed* unchecked) builds an ad-hoc signed Apple silicon `.dmg` on a Mac runner, runs the smoke test on it and uploads the `.dmg`, screenshots and the test output. Because it isn't notarized, macOS blocks the downloaded app: right-click it → **Open** → **Open**.
+The GitHub Actions workflow **Desktop macOS** (Actions tab → Run workflow, *signed* unchecked) builds an ad-hoc signed universal `.dmg` on a Mac runner, runs the smoke test on it and uploads the `.dmg`, screenshots and the test output. Because it isn't notarized, macOS blocks the downloaded app: right-click it → **Open** → **Open**.
 
 ### Release builds: signing and notarization
 
@@ -174,7 +181,7 @@ Release builds are signed with a **Developer ID Application** certificate and **
 | `APPLE_API_KEY_ID` | That key's ID |
 | `APPLE_API_ISSUER` | The issuer ID shown on the same page |
 
-The workflow writes the key to a temporary file, runs `npm run package:signed` (which stops with a clear message if anything is missing instead of producing an unsigned release), checks both apps with `codesign`, `spctl` and `stapler`, runs the smoke test on the arm64 `.dmg` in release mode, and uploads the `.dmg`, `.zip`, `.blockmap` files and `latest-mac.yml`.
+The workflow writes the key to a temporary file, runs `npm run package:signed` (which stops with a clear message if anything is missing instead of producing an unsigned release), checks the universal app with `lipo`, `codesign`, `spctl` and `stapler`, runs the smoke test on the `.dmg` in release mode, and uploads the `.dmg`, `.zip`, `.blockmap` files and `latest-mac.yml`.
 
 To build a release locally on a Mac instead: put the certificate in your keychain (or set `CSC_LINK`/`CSC_KEY_PASSWORD`) and set `APPLE_API_KEY` (path to the `.p8`), `APPLE_API_KEY_ID` and `APPLE_API_ISSUER`. Never commit certificates or keys.
 
@@ -186,16 +193,16 @@ The updater reads `latest-mac.yml` from the GitHub release **`desktop-latest`** 
 2. Run **Desktop macOS** with *signed* and *publish* checked. After the signed build and its checks pass, the `publish` job waits for approval in the **`desktop-release`** environment (add yourself as a required reviewer under Settings → Environments once). It then uploads the `.dmg`, `.zip`, `.blockmap` files and `latest-mac.yml`, and removes the previous macOS files. Windows and Linux files in the release aren't touched; the release is a pre-release, so it never becomes the repository's "Latest".
 3. In an older installed copy: menu-bar menu → **Check for Updates…**.
 
-The `.zip` files are what the updater downloads (Apple silicon and Intel each get their own); the `.dmg` files are for new installs.
+The universal `.zip` is what the updater downloads; the `.dmg` is for new installs.
 
 ### Smoke test
 
-`bash scripts/smoke-macos.sh <SonionCompanion-…-arm64.dmg> [--release]` mounts the disk image, installs the app into Applications, verifies the signature (with `--release`: Developer ID, Gatekeeper, notarization), launches it (one process, data folder, Open at Login turned on at first launch, menu-bar app type, login item via `sfltool` when `sudo` works without a password), opens it again (still one process), quits and uninstalls (data kept). It moves your data folder aside first and restores it, refuses to replace an existing installation unless `FORCE=1`, and saves screenshots when `SCREENSHOT_DIR` is set. CI runs it on every build.
+`bash scripts/smoke-macos.sh <SonionCompanion-…-universal.dmg> [--release]` mounts the disk image, installs the app into Applications, verifies the universal binary and the signature (with `--release`: Developer ID, Gatekeeper, notarization), launches it (one process, data folder, Open at Login turned on at first launch, regular app with a Dock icon, login item via `sfltool` when `sudo` works without a password), opens it again (still one process), quits and uninstalls (data kept). It moves your data folder aside first and restores it, refuses to replace an existing installation unless `FORCE=1`, and saves screenshots when `SCREENSHOT_DIR` is set. CI runs it on every build.
 
 ### Project layout
 
 - `../shared/` — app logic, data model, renderer pages, updater (shared with Windows)
-- `src/platform-macos.ts` — the macOS adapter: menu-bar template icon, no Dock icon, app/Edit menu, `activate` → Settings, window level and Spaces, ⌘ shortcut defaults
+- `src/platform-macos.ts` — the macOS adapter: Dock icon + Dock menu, menu-bar template icon, app/Edit menu, `activate` → Settings, window level and Spaces, ⌘ shortcut defaults
 - `src/login-item.ts` (+ `login-item-state.ts`, unit-tested) — Open at Login; `src/move-to-applications.ts` — the move prompt; `src/code-signature.ts` — detects a Developer ID–signed app (updates are enabled only then)
 - `resources/assets/` — default companion image, `trayTemplate.png` / `trayTemplate@2x.png` (black + alpha)
 - `resources/build/icon.png` — 1024 × 1024 app icon (electron-builder turns it into `.icns`); `entitlements.mac.plist` — hardened-runtime exceptions Electron needs

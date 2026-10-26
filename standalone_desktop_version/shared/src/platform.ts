@@ -40,7 +40,7 @@ export interface PlatformAdapter {
   trayIcon(): NativeImage;
   /** Extra BrowserWindow options for companion windows (e.g. a non-activating panel on macOS). */
   companionWindowOptions?(): Partial<Electron.BrowserWindowConstructorOptions>;
-  /** Brings the app to the foreground when Settings opens (needed on macOS, where the app has no Dock icon). */
+  /** Brings the app to the foreground when Settings opens (macOS: opened from the menu bar or a global shortcut while another app is active). */
   focusApp?(): void;
   /** Applies "keep on top" (and any OS-specific window level/Spaces behavior) to a companion window. */
   applyAlwaysOnTop?(window: BrowserWindow, alwaysOnTop: boolean): void;

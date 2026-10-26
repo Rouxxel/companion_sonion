@@ -6,7 +6,7 @@ A minimalist, borderless floating companion player for Windows. Each companion i
 
 ### Installer (recommended)
 
-Run `SonionCompanion-Setup-<version>.exe` (for example `SonionCompanion-Setup-0.2.0.exe`) and follow the steps. To build it yourself, see [Build the installer](#build-the-installer).
+Run `SonionCompanion-Setup-<version>.exe` (for example `SonionCompanion-Setup-0.3.0.exe`) and follow the steps. To build it yourself, see [Build the installer](#build-the-installer).
 
 - It installs **for your user only**, so no administrator rights are needed. The default folder is `%LOCALAPPDATA%\Programs\Sonion Companion`, and you can choose another one.
 - It adds a **Start menu** entry and a **desktop shortcut**, and lists the app under **Settings → Apps → Installed apps**.

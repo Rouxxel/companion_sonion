@@ -6,16 +6,19 @@ import { loginItem } from "./login-item";
 import { offerMoveToApplications } from "./move-to-applications";
 
 const assetsDir = path.join(__dirname, "assets");
+const devIcon = path.join(__dirname, "..", "resources", "build", "icon.png");
+/** Companion windows that already joined all Spaces (see applyAlwaysOnTop). */
+const onAllSpaces = new WeakSet<Electron.BrowserWindow>();
 
 /**
- * macOS specifics: menu-bar app without a Dock icon (LSUIElement in the packaged app), template
- * menu-bar icon, companions on every Space and over full-screen apps, ⌘-based shortcut defaults,
- * and an application menu so ⌘C/⌘V/⌘A/⌘Z work in text fields.
+ * macOS specifics: Dock icon with a Dock menu plus a template menu-bar icon, companions on every
+ * Space and over full-screen apps, ⌘-based shortcut defaults, and an application menu so
+ * ⌘C/⌘V/⌘A/⌘Z work in text fields.
  */
 export const macPlatform: PlatformAdapter = {
   id: "darwin",
   assetsDir,
-  devWindowIcon: path.join(__dirname, "..", "resources", "build", "icon.png"),
+  devWindowIcon: devIcon,
   defaults: {
     shortcuts: { enabled: true, addCompanion: "Command+Alt+Shift+A", openSettings: "Command+Alt+Shift+S" }
   },
@@ -26,8 +29,13 @@ export const macPlatform: PlatformAdapter = {
     return icon;
   },
   afterReady(ctx) {
-    // The packaged app sets LSUIElement (no Dock icon, not in ⌘-Tab); source runs hide the Dock icon here.
-    if (!app.isPackaged) app.dock?.hide();
+    // Dock icon: the packaged app uses its bundle icon; source runs would otherwise show Electron's.
+    if (!app.isPackaged) app.dock?.setIcon(devIcon);
+    // Right-click on the Dock icon (macOS adds Quit, Options and Show All Windows itself).
+    app.dock?.setMenu(Menu.buildFromTemplate([
+      { label: "Add Companion", click: () => ctx.addCompanion() },
+      { label: "Settings…", click: () => ctx.showSettings() }
+    ]));
     // Without an application menu, macOS has no Edit shortcuts (⌘C/⌘V/⌘A/⌘Z) in Settings and the URL dialog.
     Menu.setApplicationMenu(Menu.buildFromTemplate([
       {
@@ -48,7 +56,7 @@ export const macPlatform: PlatformAdapter = {
       { role: "editMenu" },
       { role: "windowMenu" }
     ]));
-    // macOS delivers "open the app again" (Finder, Launchpad, Spotlight) as `activate`, not `second-instance`.
+    // macOS delivers "open the app again" (Dock click, Finder, Launchpad, Spotlight) as `activate`, not `second-instance`.
     app.on("activate", () => ctx.showSettings());
     // Running from the DMG or Downloads: offer to move into /Applications (login item and updates need it).
     void offerMoveToApplications();
@@ -58,8 +66,13 @@ export const macPlatform: PlatformAdapter = {
   companionWindowOptions: () => (process.env.SONION_MAC_PANEL === "1" ? { type: "panel" } : {}),
   focusApp: () => app.focus({ steal: true }),
   applyAlwaysOnTop(window, alwaysOnTop) {
-    // Companions follow you to every Space and stay visible over full-screen apps.
-    window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    // Companions follow you to every Space and stay visible over full-screen apps. With a Dock icon,
+    // Electron briefly switches the process type for `visibleOnFullScreen` (the Dock icon blinks), so
+    // do it once per window, not on every "keep on top" refresh (resize, settings save).
+    if (!onAllSpaces.has(window)) {
+      window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+      onAllSpaces.add(window);
+    }
     if (alwaysOnTop) window.setAlwaysOnTop(true, "floating");
     else window.setAlwaysOnTop(false);
   },
