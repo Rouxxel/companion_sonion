@@ -10,5 +10,6 @@ button { padding: 7px 10px; cursor: pointer; } .actions { margin-top: 14px; }
 #status { min-height: 1.4em; color: #a9e7bd; } .hint { color: #b5b2bb; font-size: 12px; margin: 0; } .hint.warning { color: #ffcf8a; }
 code { font-size: 12px; word-break: break-all; } .footer { margin-top: 12px; }
 .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+button.danger { color: #ffadad; }
 button.link { padding: 0; border: 0; background: none; color: #9fc7ff; font-size: 12px; text-decoration: underline; cursor: pointer; }
 button.link:disabled { color: #b5b2bb; text-decoration: none; cursor: default; }

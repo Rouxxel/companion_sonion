@@ -83,6 +83,9 @@
       say(`Imported ${result.companions} companion(s) and ${result.profiles} layout(s)${result.skipped ? `; skipped ${result.skipped} invalid` : ""}.`);
     } catch (error) { fail("Could not import.", error); }
   });
+  $("#delete-all-data").addEventListener("click", async () => {
+    try { if (await app.deleteAllData()) say("Deleting your data — Sonion Companion is quitting."); } catch (error) { fail("Could not delete the data.", error); }
+  });
   $("#check-updates").addEventListener("click", async () => { try { await app.checkForUpdates(); } catch (error) { fail("Could not check for updates.", error); } });
   if (typeof app.onSettingsChanged === "function") app.onSettingsChanged(() => void load());
   void load();

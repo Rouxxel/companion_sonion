@@ -375,8 +375,16 @@ export class CompanionManager {
     return { companions: companions.length, skipped: Math.max(0, offered - companions.length), profiles: Object.keys(imported).length };
   }
 
+  private persistenceDisabled = false;
+
+  /** Stops all writes (used right before "Delete all data…" quits the app, so nothing recreates the file). */
+  public disablePersistence(): void {
+    this.persistenceDisabled = true;
+  }
+
   /** Writes the complete state through a sibling temporary file before replacing the config. */
   public save(): void {
+    if (this.persistenceDisabled) return;
     const directory = path.dirname(this.configPath);
     mkdirSync(directory, { recursive: true });
     const temporaryPath = `${this.configPath}.${process.pid}.${randomUUID()}.tmp`;

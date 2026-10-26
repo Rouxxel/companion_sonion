@@ -38,6 +38,8 @@ export interface PlatformAdapter {
   /** Defaults for missing/invalid saved values (shortcuts use ⌘ on macOS, for example). */
   defaults: { shortcuts: ShortcutSettings; idleSleep?: IdleSleepSettings };
   trayIcon(): NativeImage;
+  /** Extra BrowserWindow options for companion windows (e.g. a non-activating panel on macOS). */
+  companionWindowOptions?(): Partial<Electron.BrowserWindowConstructorOptions>;
   /** Brings the app to the foreground when Settings opens (needed on macOS, where the app has no Dock icon). */
   focusApp?(): void;
   /** Applies "keep on top" (and any OS-specific window level/Spaces behavior) to a companion window. */

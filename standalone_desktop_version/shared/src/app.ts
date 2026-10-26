@@ -7,6 +7,7 @@ import { PRODUCT_NAME } from "./app-identity";
 import { Companion, CompanionManager, CompanionSettings, ShortcutSettings } from "./companion-manager";
 import { boundsInWorkArea, companionDimensions, DisplayInfo, normalizedPosition, pickDisplay, saveDisplay, Size } from "./geometry";
 import type { PlatformAdapter } from "./platform";
+import { removeFolderAfterExit } from "./remove-after-exit";
 import { checkForUpdates } from "./updater";
 
 type PointDelta = { x: number; y: number };
@@ -197,6 +198,7 @@ function createCompanionWindow(companion: Companion): BrowserWindow {
   const window = new BrowserWindow({
     ...boundsFor(companion, displayForCompanion(companion)), frame: false, transparent: true, skipTaskbar: true, resizable: false,
     movable: false, hasShadow: false, show: false,
+    ...platform.companionWindowOptions?.(),
     webPreferences: { preload: PRELOAD, contextIsolation: true, nodeIntegration: false, sandbox: true }
   });
   companionWindows.set(companion.id, window);
@@ -350,6 +352,29 @@ async function importWorld(): Promise<{ companions: number; skipped: number; pro
   return summary;
 }
 
+/**
+ * "Delete all data…": after confirmation, stops saving, quits, and a detached helper removes the data
+ * folder once the app has exited. Start at login is left as it is (uninstalling removes it); turning it
+ * off here would be undone, because the deleted data also holds the "already set up" flag.
+ */
+async function deleteAllData(): Promise<boolean> {
+  const dataPath = app.getPath("userData");
+  const options: Electron.MessageBoxOptions = {
+    type: "warning", title: PRODUCT_NAME, noLink: true, buttons: ["Delete and Quit", "Cancel"], defaultId: 1, cancelId: 1,
+    message: "Delete all Sonion Companion data?",
+    detail: `This permanently removes your companions, layouts, settings and cached assets:\n${dataPath}\n\n`
+      + `Sonion Companion quits and starts fresh the next time you open it. ${platform.autostart.label} isn't changed; turn it off first if you're removing the app. `
+      + "Tip: Export companions first to keep a copy."
+  };
+  const parent = settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow : undefined;
+  const { response } = parent ? await dialog.showMessageBox(parent, options) : await dialog.showMessageBox(options);
+  if (response !== 0) return false;
+  manager.disablePersistence();
+  removeFolderAfterExit(dataPath);
+  setImmediate(() => app.quit());
+  return true;
+}
+
 function createTray(): void {
   tray = new Tray(platform.trayIcon());
   tray.setToolTip(PRODUCT_NAME);
@@ -492,6 +517,7 @@ function registerIpc(): void {
   ipcMain.handle("app:export-world", () => exportWorld());
   ipcMain.handle("app:import-world", () => importWorld());
   ipcMain.handle("app:check-for-updates", () => checkForUpdates(platform.updatesAvailable()));
+  ipcMain.handle("app:delete-all-data", () => deleteAllData());
   ipcMain.handle("app:delete-profile", (_event, name: string) => manager.deleteProfile(name));
 }
 

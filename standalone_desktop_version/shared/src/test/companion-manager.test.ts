@@ -134,6 +134,16 @@ describe("CompanionManager — changes", () => {
     assert.ok(manager.bringToFront(first.id).zIndex > Math.max(...manager.list().filter((c) => c.id !== first.id).map((c) => c.zIndex)));
   });
 
+  test("after disablePersistence nothing is written (Delete all data)", () => {
+    const manager = new CompanionManager(dir);
+    manager.create();
+    rmSync(configPath());
+    manager.disablePersistence();
+    manager.create();
+    manager.updateSettings({ hoverOpacity: 0.5 });
+    assert.equal(existsSync(configPath()), false);
+  });
+
   test("saving is atomic: no temporary files are left behind", () => {
     const manager = new CompanionManager(dir);
     for (let i = 0; i < 5; i++) manager.create();

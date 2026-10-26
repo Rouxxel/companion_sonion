@@ -17,6 +17,6 @@ contextBridge.exposeInMainWorld("companion", {
 contextBridge.exposeInMainWorld("desktopApp", {
   getSettings: () => invoke("app:get-settings"), updateSettings: (updates: unknown) => invoke("app:update-settings", updates), addCompanion: () => invoke("app:add-companion"), listProfiles: () => invoke("app:list-profiles"), saveProfile: (name: string) => invoke("app:save-profile", name), loadProfile: (name: string) => invoke("app:load-profile", name), deleteProfile: (name: string) => invoke("app:delete-profile", name),
   getInfo: () => invoke("app:get-info"), openDataFolder: () => invoke("app:open-data-folder"),
-  exportWorld: () => invoke("app:export-world"), importWorld: () => invoke("app:import-world"), checkForUpdates: () => invoke("app:check-for-updates"),
+  exportWorld: () => invoke("app:export-world"), importWorld: () => invoke("app:import-world"), checkForUpdates: () => invoke("app:check-for-updates"), deleteAllData: () => invoke("app:delete-all-data"),
   onSettingsChanged: (callback: () => void) => { const listener = () => callback(); ipcRenderer.on("app:settings-changed", listener); return () => ipcRenderer.removeListener("app:settings-changed", listener); }
 });
