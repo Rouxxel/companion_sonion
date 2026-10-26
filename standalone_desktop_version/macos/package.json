@@ -10,6 +10,7 @@
     "build": "npm --prefix ../shared run build && node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json && node scripts/copy-static.mjs",
     "start": "npm run build && electron .",
     "typecheck": "npm --prefix ../shared run build && tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test --test-reporter=spec \"dist/test/**/*.test.js\"",
     "package:dir": "npm run build && electron-builder --mac --dir",
     "package": "npm run build && electron-builder --mac"
   },
@@ -23,6 +24,7 @@
     },
     "files": [
       "dist/**/*",
+      "!dist/test/**",
       "package.json",
       "!**/node_modules/@sonion/companion-core/{src,build-test,tsconfig*.json,.gitignore}"
     ],
