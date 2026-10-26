@@ -19,7 +19,10 @@
 
 - Keep dev dependency versions identical to `windows/` and `shared/` (pinned exactly)
 - Bundle id = `APP_ID` (`com.sonion.companion`); data in `~/Library/Application Support/Sonion Companion`
-- "Open at Login" and updates are not implemented yet (adapter returns unavailable)
+- Open at Login (`src/login-item.ts`): only for the packaged app in /Applications; first-run default on (`autostartInitialized`), macOS is the source of truth afterwards; `requires-approval` counts as on with a Settings note. State logic is pure in `login-item-state.ts` (unit tests run on any OS: `npm test` in `macos/`)
+- Move to Applications (`src/move-to-applications.ts`): prompt after ready when packaged outside /Applications; "Don't Ask Again" lives in `macos-preferences.json` (macOS-only, not in `companions.json`)
+- `SONION_MAC_PANEL=1` switches companion windows to `type: "panel"` (evaluation only; via `PlatformAdapter.companionWindowOptions`)
+- Updates are not implemented yet (adapter returns unavailable)
 - Never commit certificates, Apple IDs, app-specific passwords or API keys (signing/notarization come via CI secrets)
 - `ELECTRON_RUN_AS_NODE=1` in the environment makes Electron start as plain Node (`app` undefined) — unset it
 - User-facing changes: update `README.md` and `CHANGELOG.md` `[Unreleased]` in the same change
