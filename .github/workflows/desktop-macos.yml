@@ -1,20 +1,26 @@
 name: Desktop macOS
 
-# Manual only. Two modes:
-# - dev build (default): ad-hoc signed arm64 app from standalone_desktop_version/macos, launched on the
-#   runner from /Applications; uploads screenshots + the zipped app.
+# Manual only. Modes:
+# - dev build (default): ad-hoc signed arm64 .dmg from standalone_desktop_version/macos; the smoke script
+#   installs it on the runner, launches it and uninstalls it; uploads screenshots + the .dmg.
 # - signed build (input "signed"): Developer ID–signed and notarized .dmg + .zip for arm64 and x64,
-#   verified with codesign/spctl/stapler. Needs these repository secrets:
+#   verified with codesign/spctl/stapler and the smoke script in release mode. Needs repository secrets:
 #     MACOS_CERTIFICATE_P12_BASE64   Developer ID Application certificate (.p12), base64-encoded
 #     MACOS_CERTIFICATE_PASSWORD     password of that .p12
 #     APPLE_API_KEY_P8               App Store Connect API key file content (AuthKey_XXXX.p8)
 #     APPLE_API_KEY_ID               its key id
 #     APPLE_API_ISSUER               issuer id
+# - publish (inputs "signed" + "publish"): uploads the signed files and latest-mac.yml to the GitHub
+#   release "desktop-latest" (the update feed) after approval in the "desktop-release" environment.
 on:
   workflow_dispatch:
     inputs:
       signed:
         description: "Signed + notarized release build (needs the Apple secrets)"
+        type: boolean
+        default: false
+      publish:
+        description: "Publish the signed build to the desktop-latest release (needs approval)"
         type: boolean
         default: false
 
@@ -46,48 +52,16 @@ jobs:
       - name: Unit tests (shared core + platforms)
         run: npm test
 
-      - name: Build the app (arm64, unpacked, ad-hoc signed)
+      - name: Build the app (arm64 .dmg, ad-hoc signed)
         working-directory: standalone_desktop_version/macos
         run: |
           npm run build
-          npx electron-builder --mac dir --arm64 "-c.mac.identity=-" -c.mac.notarize=false
-          sh scripts/verify-signature.sh "release/mac-arm64/Sonion Companion.app"
+          npx electron-builder --mac dmg --arm64 "-c.mac.identity=-" -c.mac.notarize=false
+          ls -la release
 
-      - name: Launch from /Applications and take screenshots
+      - name: Smoke test (install from the .dmg, launch, open again, uninstall)
         working-directory: standalone_desktop_version/macos
-        run: |
-          # Run from /Applications like a user would (outside it, the app offers to move itself there).
-          rm -rf "/Applications/Sonion Companion.app"
-          ditto "release/mac-arm64/Sonion Companion.app" "/Applications/Sonion Companion.app"
-          APP="/Applications/Sonion Companion.app"
-          DATA="$HOME/Library/Application Support/Sonion Companion"
-          mkdir -p screenshots
-          "$APP/Contents/MacOS/Sonion Companion" > screenshots/app.log 2>&1 &
-          sleep 20
-          screencapture -x screenshots/1-first-launch.png
-          # Opening the app again must not start a second copy; it shows Settings instead.
-          open -n "$APP"
-          sleep 10
-          screencapture -x screenshots/2-opened-again.png
-          MAIN_PROCESSES=$(pgrep -f "Sonion Companion.app/Contents/MacOS/Sonion Companion$" | wc -l | tr -d ' ')
-          {
-            echo "Main processes after opening again: $MAIN_PROCESSES"
-            echo "Open at Login after first launch (startWithWindows / autostartInitialized):"
-            node -e "const s=require(process.argv[1]).settings; console.log(s.startWithWindows, s.autostartInitialized)" "$DATA/companions.json"
-            ls -la "$DATA"
-          } | tee screenshots/result.txt
-          pkill -f "Sonion Companion.app/Contents/MacOS" || true
-          # Leave the runner clean: remove the login item registration together with the app.
-          rm -rf "/Applications/Sonion Companion.app"
-          test "$MAIN_PROCESSES" = "1"
-
-      - name: Zip the app for download
-        if: always()
-        working-directory: standalone_desktop_version/macos
-        run: |
-          if [ -d "release/mac-arm64/Sonion Companion.app" ]; then
-            ditto -c -k --keepParent "release/mac-arm64/Sonion Companion.app" "SonionCompanion-dev-arm64.zip"
-          fi
+        run: SCREENSHOT_DIR="$PWD/screenshots" bash scripts/smoke-macos.sh release/SonionCompanion-*-arm64.dmg | tee smoke.txt
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -95,7 +69,8 @@ jobs:
           name: macos-dev-build
           path: |
             standalone_desktop_version/macos/screenshots/
-            standalone_desktop_version/macos/SonionCompanion-dev-arm64.zip
+            standalone_desktop_version/macos/smoke.txt
+            standalone_desktop_version/macos/release/*.dmg
           if-no-files-found: warn
           retention-days: 14
 
@@ -139,17 +114,23 @@ jobs:
           export APPLE_API_KEY="$RUNNER_TEMP/AuthKey.p8"
           npm run package:signed
 
-      - name: Verify signature, Gatekeeper and notarization
+      - name: Remove the API key file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
+
+      - name: Verify signature, Gatekeeper and notarization (both architectures)
         working-directory: standalone_desktop_version/macos
         run: |
           for APP in "release/mac-arm64/Sonion Companion.app" "release/mac/Sonion Companion.app"; do
             sh scripts/verify-signature.sh "$APP" --release
           done
+          test -f release/latest-mac.yml
+          cat release/latest-mac.yml
           ls -la release
 
-      - name: Remove the API key file
-        if: always()
-        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
+      - name: Smoke test the arm64 .dmg (release mode)
+        working-directory: standalone_desktop_version/macos
+        run: SCREENSHOT_DIR="$PWD/screenshots" bash scripts/smoke-macos.sh release/SonionCompanion-*-arm64.dmg --release | tee smoke.txt
 
       - uses: actions/upload-artifact@v4
         with:
@@ -158,5 +139,52 @@ jobs:
             standalone_desktop_version/macos/release/*.dmg
             standalone_desktop_version/macos/release/*.zip
             standalone_desktop_version/macos/release/*.blockmap
+            standalone_desktop_version/macos/release/latest-mac.yml
           if-no-files-found: error
           retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-signed-smoke
+          path: |
+            standalone_desktop_version/macos/screenshots/
+            standalone_desktop_version/macos/smoke.txt
+          if-no-files-found: warn
+          retention-days: 30
+
+  publish:
+    needs: signed
+    if: ${{ inputs.signed && inputs.publish }}
+    runs-on: ubuntu-latest
+    # Add required reviewers to this environment (Settings → Environments) so publishing needs approval.
+    environment: desktop-release
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: desktop-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-signed-build
+          path: upload
+
+      - name: Create the desktop-latest release if needed (pre-release, so it never becomes "Latest")
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --prerelease \
+            --title "Sonion Companion (desktop) — latest" --notes "Latest desktop builds. See each platform's CHANGELOG.md."
+
+      - name: Upload the macOS files (replaces latest-mac.yml)
+        run: |
+          ls -la upload
+          gh release upload "$TAG" upload/* --clobber
+
+      - name: Remove older macOS files (Windows/Linux files are untouched)
+        run: |
+          gh release view "$TAG" --json assets -q '.assets[].name' \
+            | grep -E '^SonionCompanion-.*(-mac\.zip|\.dmg)(\.blockmap)?$' \
+            | while read -r NAME; do
+                if [ ! -f "upload/$NAME" ]; then echo "Deleting old asset $NAME"; gh release delete-asset "$TAG" "$NAME" --yes; fi
+              done
