@@ -1,6 +1,7 @@
 import { app, Menu, nativeImage } from "electron";
 import path from "node:path";
 import { launchedAtLogin, PlatformAdapter, PRODUCT_NAME } from "@sonion/companion-core";
+import { runningAppIsDeveloperIdSigned } from "./code-signature";
 import { loginItem } from "./login-item";
 import { offerMoveToApplications } from "./move-to-applications";
 
@@ -65,5 +66,6 @@ export const macPlatform: PlatformAdapter = {
   // Started as a login item: don't open Settings. (`--autostart` keeps parity with the other platforms.)
   launchedAtLogin: () => launchedAtLogin() || app.getLoginItemSettings().wasOpenedAtLogin === true,
   autostart: loginItem,
-  updatesAvailable: () => false
+  // Squirrel.Mac only updates a Developer ID–signed app, and only reliably from /Applications.
+  updatesAvailable: () => app.isPackaged && app.isInApplicationsFolder() && runningAppIsDeveloperIdSigned()
 };
